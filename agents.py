@@ -12,25 +12,34 @@ class GridworldTDLearner(object):
             e.g. (11, 11) for a square gridworld
         w (np.array): the weight "vector" for TD learning
         e (np.array): the eligibility trace "vector"
-        xt (np.array): the current feature "vector" representing the state
-        xtp1 (np.array): the previous feature "vector"
+        
+        xt (tuple): the current coordinates of the learner on the grid; this 
+            stands in as the feature vector for TD learning
+        xtp1 (tuple): the previous coordinates
+        R (float): the current reward (received in the transition from xt to 
+            xtp1)
+        
         delta (float): 
-        R (float):
-        alpha (float): 
+        
+        alpha (float): the alpha parameter (step size) used to update weights
         lam (float): the lambda parameter used for eligibility trace updates
     """
 
   
     def __init__(self, side_lengths):
-        """
+        """Initialize a new GridworldTDLearner
+
+        Args:
+            side_lengths (tuple): the length of each side of the grid 
+                (width, height); e.g. (11, 11) for a square gridworld
         """
         self.side_lengths = side_lengths
         self.w = None
         self.e = None
         self.xt = None
         self.xtp1 = None
-        self.delta = 0
         self.R = 0
+        self.delta = 0
         self.alpha = 0.01
         self.lam = 0.0
         self.reset(True)
@@ -39,7 +48,8 @@ class GridworldTDLearner(object):
         """ Reset or initiaize all "vectors" for a new episode
 
         Args:
-            zero_weights (np.array): 
+            zero_weights (bool): True iff the weight "vector" should be reset to
+                a zero "vector".
         """
         self.e = np.zeros([self.side_lengths[0],self.side_lengths[1]])
         if zero_weights:
@@ -50,12 +60,32 @@ class GridworldTDLearner(object):
         """
         return np.zeros([self.side_lengths[0],self.side_lengths[1]])
       
-    def update(self, xt, xtp1, R, gamma, vshort=None):
+    def update(self, xt, xtp1, R, gamma):
         """Method to update the learning weights based on a state and stuff
         """
         self.xt = xt
         self.xtp1 = xtp1
         self.R = R
         self.delta = self.R + gamma*(self.w[xtp1[0],xtp1[1]]) - self.w[xt[0],xt[1]]
+        # self.e = gamma*self.lam*self.e + xt
+        self.w[xt[0],xt[1]] += self.alpha*self.delta
+
+class CuriousTDLearner(GridworldTDLearner):
+    """
+    """
+
+    def __init__(self, side_lengths):
+        super().__init__(side_lengths)
+
+    def update(self, xt, xtp1, R, gamma, vshort=None):
+        """
+        """
+        if vshort is None:
+            vshort = self.get_blank_vector()
+        self.xt = xt
+        self.xtp1 = xtp1
+        self.R = R
+        self.delta = self.R + gamma*(self.w[xtp1[0],xtp1[1]]) + \
+            (self.w[xt[0],xt[1]]+vshort[xt[0],xt[1]])
         # self.e = gamma*self.lam*self.e + xt
         self.w[xt[0],xt[1]] += self.alpha*self.delta
