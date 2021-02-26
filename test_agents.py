@@ -22,7 +22,7 @@ def one_state_update(learner):
 	xtp1 = (0,0)
 	R = 1
 	learner.update(xt, xtp1, R, gamma=1)
-	assert learner.w[0][0] == learner.alpha
+	assert learner.V[0][0] == learner.alpha
 
 def test_one_state_update():
 	learner = agents.GridworldTDLearner((1,1))
@@ -33,12 +33,12 @@ def test_curious_one_state_update():
 	learner = agents.CuriousTDLearner((1,1))
 	one_state_update(learner)
 
-def test_one_state_vshort_update():
+def test_one_state_vcurious_update():
 	"""Test to ensure the TD-learning update seems to work in a very tiny world
 	"""
 	learner = agents.CuriousTDLearner((1,1))
 	xt = (0,0)
 	xtp1 = (0,0)
 	R = 1
-	learner.update(xt, xtp1, R, gamma=1, vshort=np.array([[1.0]]))
-	assert learner.w[0][0] == 2*learner.alpha
+	learner.update(xt, xtp1, R, gamma=1, vcurious=np.array([[1.0]]))
+	assert learner.V[0][0] == 2*learner.alpha

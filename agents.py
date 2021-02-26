@@ -10,7 +10,8 @@ class GridworldTDLearner(object):
     Attributes:
         side_lengths (tuple): the length of each side of the grid (width, height)
             e.g. (11, 11) for a square gridworld
-        w (np.array): the weight "vector" for TD learning
+        V (np.array): the current estimate of the value function for each grid 
+            coordinate; analogous to the weight "vector" for TD learning
         e (np.array): the eligibility trace "vector"
         
         xt (tuple): the current coordinates of the learner on the grid; this 
@@ -34,7 +35,7 @@ class GridworldTDLearner(object):
                 (width, height); e.g. (11, 11) for a square gridworld
         """
         self.side_lengths = side_lengths
-        self.w = None
+        self.V = None
         self.e = None
         self.xt = None
         self.xtp1 = None
@@ -53,7 +54,7 @@ class GridworldTDLearner(object):
         """
         self.e = np.zeros([self.side_lengths[0],self.side_lengths[1]])
         if zero_weights:
-          self.w = np.zeros([self.side_lengths[0],self.side_lengths[1]])
+          self.V = np.zeros([self.side_lengths[0],self.side_lengths[1]])
       
     def get_blank_vector(self):
         """ New zero vector of same shape as other "vectors"
@@ -66,9 +67,9 @@ class GridworldTDLearner(object):
         self.xt = xt
         self.xtp1 = xtp1
         self.R = R
-        self.delta = self.R + gamma*(self.w[xtp1[0],xtp1[1]]) - self.w[xt[0],xt[1]]
+        self.delta = self.R + gamma*(self.V[xtp1[0],xtp1[1]]) - self.V[xt[0],xt[1]]
         # self.e = gamma*self.lam*self.e + xt
-        self.w[xt[0],xt[1]] += self.alpha*self.delta
+        self.V[xt[0],xt[1]] += self.alpha*self.delta
 
 class CuriousTDLearner(GridworldTDLearner):
     """
@@ -77,15 +78,15 @@ class CuriousTDLearner(GridworldTDLearner):
     def __init__(self, side_lengths):
         super().__init__(side_lengths)
 
-    def update(self, xt, xtp1, R, gamma, vshort=None):
+    def update(self, xt, xtp1, R, gamma, vcurious=None):
         """
         """
-        if vshort is None:
-            vshort = self.get_blank_vector()
+        if vcurious is None:
+            vcurious = self.get_blank_vector()
         self.xt = xt
         self.xtp1 = xtp1
         self.R = R
-        self.delta = self.R + gamma*(self.w[xtp1[0],xtp1[1]]) + \
-            (self.w[xt[0],xt[1]]+vshort[xt[0],xt[1]])
+        self.delta = self.R + gamma*(self.V[xtp1[0],xtp1[1]]) + \
+            (self.V[xt[0],xt[1]]+vcurious[xt[0],xt[1]])
         # self.e = gamma*self.lam*self.e + xt
-        self.w[xt[0],xt[1]] += self.alpha*self.delta
+        self.V[xt[0],xt[1]] += self.alpha*self.delta
