@@ -15,16 +15,17 @@ def basic_experiment():
 	for i in range(total_steps):
 		world.visit(world.pos)
 		action = learner.get_action(world.pos, epsilon=0.2)
-		next_pos = world.get_next_state_walled(world.pos, action)
-		R = world.get_reward()
-		satisfied = learner.update(world.pos, next_pos, R, gamma=0.9)
-		if satisfied:
+		next_pos = world.get_next_state(world.pos, action)
+		reward = world.get_reward()
+		learner.update(world.pos, next_pos, reward, gamma=0.9)
+		if learner.is_target(next_pos):
 			world.visit(next_pos)
 			next_pos = world.start_pos
 		world.pos = next_pos
-	plot_heatmap(learner.V, target=learner.target, spawn=learner.spawn_point,start=world.start_pos, agent=next_pos, title="Value", cmap="viridis")
+	plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=next_pos, title="Value", cmap="viridis")
 	plot_heatmap(world.visit_array, title="Visits")
 	print(world.visit_array)
 
 if __name__=="__main__":
 	basic_experiment()
+

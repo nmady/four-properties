@@ -8,6 +8,8 @@ class SimpleGridWorld(object):
 
     def __init__(self, side_lengths):
         """
+
+        self.actions (tuple of tuples): 
         """
 
         # Start position is always in the middle, in the second from bottom row
@@ -18,8 +20,9 @@ class SimpleGridWorld(object):
         self.state_array = np.zeros(self.dimensions, dtype=np.bool_)
         self.visit_array = np.zeros(self.dimensions, dtype=np.int_)
         self.reward_array = np.zeros(self.dimensions)
+        self.actions = tuple(a for a in product((-1,0,1),(-1,0,1)) if a!=(0,0))
 
-    def get_next_state_walled(self, state, action):
+    def get_next_state(self, state, action):
         # actions look like tuples that you add to the state to get the new position:
         #   [-1,0] is left, [1,0] is right, [0, -1] is probably up? [0,1] is probably down
         ##TODO: consider using np.clip
@@ -68,7 +71,7 @@ class SimpleGridWorld(object):
                 next_value_grid[state] = -np.inf
 
                 for action in product((-1,0,1),(-1,0,1)):
-                    next_state = self.get_next_state_walled(state, action)
+                    next_state = self.get_next_state(state, action)
                     value = reward_grid[state] + gamma*value_grid[next_state]
                     if value > next_value_grid[state]:
                         next_value_grid[state] = value

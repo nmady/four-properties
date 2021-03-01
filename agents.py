@@ -2,43 +2,10 @@ import numpy as np
 
 from environments import SimpleGridWorld
 from visualization import plot_heatmap
-from random import choice
 
-def value_iteration(rfunc, vfunc, gamma=0.9):
-  vf = vfunc
-  rf = rfunc
-  vf_prev = None
-  num_rows = vf.shape[0]
-  num_cols = vf.shape[1]
-  while not np.array_equal(vf, vf_prev):
-  #for t in range(0,10):
-    vf_prev = vf
-    vf = np.zeros((num_rows,num_cols))
-    for x in range(0,num_rows):
-      for y in range(0,num_cols):
-        vlist = [rf[x,y]+gamma*vf_prev[x,y]]
-        try:
-          if x+1 < num_rows:
-            vlist.append(rf[min(x+1,num_rows-1),y] + gamma*vf_prev[min(x+1,num_rows-1),y])
-        except:
-          pass
-        try: 
-          if x-1 > -1:
-            vlist.append(rf[max(x-1,0),y] + gamma*vf_prev[max(x-1,0),y])
-        except:
-          pass          
-        try:
-          if y+1 < num_cols: 
-            vlist.append(rf[x,min(y+1,num_cols-1)] + gamma*vf_prev[x,min(y+1,num_cols-1)])
-        except:
-          pass
-        try: 
-          if y-1 > -1:
-            vlist.append(rf[x,max(y-1,0)] + gamma*vf_prev[x,max(y-1,0)])
-        except:
-          pass
-        vf[x,y] = max(vlist)
-  return vf
+from random import choice
+from itertools import product
+
 
 class GridworldTDLearner(object):
     """This is our base TD Learner class, without any curiosity included.
@@ -56,7 +23,7 @@ class GridworldTDLearner(object):
         
         state (tuple): the current coordinates of the learner on the grid; this 
             stands in as the feature vector for TD learning
-        next_state (tuple): the previous coordinates
+        next_state (tuple): the next coordinates
         R (float): the current reward (received in the transition from state to 
             next_state)
         
@@ -67,107 +34,129 @@ class GridworldTDLearner(object):
     """
 
   
-    def __init__(self, side_lengths):
+    def __init__(self, side_lengths: tuple):
         """Initialize a new GridworldTDLearner
 
         Args:
             side_lengths (tuple): the length of each side of the grid 
                 (rows, columns); e.g. (11, 11) for a square gridworld,
                 (11,50) for a wide gridworld
+        Raises:
+            AssertionError : if side_lengths is not a tuple
         """
+
+        assert type(side_lengths) is tuple
+
         self.side_lengths = side_lengths
         self.V = None
         self.e = None
         self.state = None
         self.next_state = None
-        self.R = 0
+        self.reward = 0
         self.delta = 0
         self.alpha = 0.01
         self.lam = 0.0
+
         self.reset(True)
       
     def reset(self, zero_weights=False):
-        """ Reset or initiaize all "vectors" for a new episode
+        """ Zero eligibility trace and/or value "vectors" for a new episode
 
         Args:
             zero_weights (bool): True iff the weight "vector" should be reset to
                 a zero "vector".
         """
-        self.e = np.zeros([self.side_lengths[0],self.side_lengths[1]])
+        self.e = np.zeros(self.side_lengths)
         if zero_weights:
-          self.V = np.zeros([self.side_lengths[0],self.side_lengths[1]])
+          self.V = np.zeros(self.side_lengths)
       
-    def get_blank_vector(self):
-        """ New zero vector of same shape as other "vectors"
+    def update(self, state: tuple, next_state: tuple, reward, gamma):
+        """TD update V based on the transition from state to next_state
+        
+        Also sets the internal record of the state, next_state, and reward
+
+        Args:
+            state (tuple), next_state (tuple), R (real number) : are as 
+                documented as Attributes of GridWorldTDLearner
+            gamma (float) : the discount factor, between 0 and 1 inclusive
+
         """
-        return np.zeros([self.side_lengths[0],self.side_lengths[1]])
-      
-    def update(self, state, next_state, R, gamma):
-        """Method to update the learning weights based on a state and stuff
-        """
+
+        assert self.V.shape == self.side_lengths
+
         self.state = state
         self.next_state = next_state
-        self.R = R
-        self.delta = self.R + gamma*(self.V[next_state]) - self.V[state]
+        self.reward = reward
+        self.delta = self.reward + gamma*self.V[next_state] - self.V[state]
         # self.e = gamma*self.lam*self.e + state
         self.V[state] += self.alpha*self.delta
 
 class CuriousTDLearner(GridworldTDLearner):
-    """
+    """A GridworldTDLearner with simple specific curiosity demonstration.
+
+    TODO: This probably needs more explanation
 
     Attributes:
-        spawn_point (tuple): This is the permanent, hard-coded  home of the 
-            bookstore, saved as the coordinates (row, col) that consistently 
+        See GridworldTDLearner for base class attributes.
+        curiosity_inducing_state (tuple): This is the permanent, hard-coded  home of the 
+            "bookstore", saved as the coordinates (row, col) that consistently 
             induce curiosity in the agent.
         target (None or tuple): If curiosity has been induced in the agent, then
             a target is generated, represented as the coordinates (row, col) 
             that the agent will direct its behaviour towards as long as it
             remains curious.
+        vcurious (numpy array): A transient value function that directs the 
+            learner towards the target (set through value iteration) when the 
+            learner is curious, and is zero everywhere otherwise.
+        rcurious (numpy array): A transient reward function that, when the 
+            learner is curious, is set to -1 everywhere except the target, and 
+            zero everywhere when the learner is not curious.
+        target_row (int): All targets will be generated in the target_row of the
+            gridworld.
+        model (SimpleGridWorld): model of the world, used for action selection
+            and value iteration to set vcurious
+        
     """
 
-    def __init__(self, side_lengths, num_actions=8, target_col=1):
-        """
+    def __init__(self, side_lengths, target_row=1):
+        """Initialize a new CuriousTDLearner
+
+        
         """
         super().__init__(side_lengths)
 
-        self.spawn_point = (int(side_lengths[1]/2), int(side_lengths[1]/2))
+        assert target_row < side_lengths[0]
+
+        self.curiosity_inducing_state = (side_lengths[1]//2, side_lengths[1]//2)
         self.target = None
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
-        self.action_list = [(0,1),
-                            (0,-1),
-                            (1,0),
-                            (-1,0),
-                            (1,1),
-                            (1,-1),
-                            (-1,1),
-                            (1,-1)]
-        self.target_row = target_col
+        self.target_row = target_row
         self.model = SimpleGridWorld(side_lengths)
 
 
-    def update(self, state, next_state, R, gamma):
+    def update(self, state, next_state, reward, gamma):
         """
         """
         if self.vcurious is None:
-            vcurious = self.get_blank_vector()
+            vcurious_at_state = 0
         else:
-            vcurious = self.vcurious
+            vcurious_at_state = self.vcurious[state]
         self.state = state
         self.next_state = next_state
-        self.R = R
-        self.delta = self.R + gamma*self.V[next_state] - (self.V[state]+vcurious[state])
+        self.reward = reward
+        self.delta = (self.reward + gamma*self.V[next_state] - 
+            (self.V[state]+vcurious_at_state))
         # self.e = gamma*self.lam*self.e + state
         self.V[state] += self.alpha*self.delta
 
-        if self.check_spawn_point(next_state):
+        if self.is_curiosity_inducing(next_state):
             pass
             # print("Bookstore? Agent at", next_state)
             # plot_heatmap(self.V, title="Permanent Value", target=self.target,
-            #     spawn=self.spawn_point, start=self.model.start_pos, agent=next_state)
+            #     spawn=self.curiosity_inducing_state, start=self.model.start_pos, agent=next_state)
             # plot_heatmap(self.vcurious, title="Transient Value", target=self.target,
-            #     spawn=self.spawn_point, start=self.model.start_pos, agent=next_state)
-        return self.is_target(next_state)
+            #     spawn=self.curiosity_inducing_state, start=self.model.start_pos, agent=next_state)
 
 
 
@@ -179,8 +168,8 @@ class CuriousTDLearner(GridworldTDLearner):
 
         pertinent_v = self.vcurious if self.target is not None else self.V
 
-        for action in self.action_list:
-            result_state = self.model.get_next_state_walled(state, action)
+        for action in self.model.actions:
+            result_state = self.model.get_next_state(state, action)
             # requires that the reward is zero
             qval = pertinent_v[result_state]
             if qval > max_qval:
@@ -192,30 +181,29 @@ class CuriousTDLearner(GridworldTDLearner):
 
         # only behave epsilon-greedily if not curious (ie self.target is None)
         if (np.random.rand() < epsilon) and (self.target is None):
-            chosen_action = choice(self.action_list)
+            chosen_action = choice(self.model.actions)
         return chosen_action
 
-    def check_spawn_point(self, pos):
-        if np.array_equal(pos, self.spawn_point):
-            if self.target == None:
-                new_target_col = np.random.randint(0,self.side_lengths[1])
-                self.target = (self.target_row, new_target_col)
+    def is_curiosity_inducing(self, pos):
+        if pos == self.curiosity_inducing_state and self.target == None:
+            new_target_col = np.random.randint(0,self.side_lengths[1])
+            self.target = (self.target_row, new_target_col)
 
-                self.rcurious = np.full(self.side_lengths, -1)
-                self.rcurious[self.target] = 0
+            self.rcurious = np.full(self.side_lengths, -1)
+            self.rcurious[self.target] = 0
 
-                self.vcurious = self.model.value_iteration(self.rcurious, 
-                                                            gamma=0.9)
-                return True
+            self.vcurious = self.model.value_iteration(self.rcurious, 
+                                                        gamma=0.9)
+            return True
         return False
 
     def is_target(self, pos):
-        if np.array_equal(pos, self.target):
+        if pos == self.target:
             self.target = None
 
-            self.rcurious = np.zeros(self.side_lengths)
+            self.rcurious.fill(0)
 
-            self.vcurious = np.zeros(self.side_lengths)
+            self.vcurious.fill(0)
 
             return True
         return False
