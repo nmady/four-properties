@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import seaborn as sns
 
-def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None):
+def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, display="Show"):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
   plt.figure(dpi=200)
@@ -22,4 +22,7 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     ax.add_patch(rect)       
   if title:    
     plt.title(title)
-  plt.show()
+  if display == "Show":
+  	plt.show()
+  elif display == "Save":
+    plt.savefig("output/"+title+".png")
