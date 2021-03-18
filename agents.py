@@ -104,7 +104,7 @@ class CuriousTDLearner(GridworldTDLearner):
         target (None or tuple): If curiosity has been induced in the agent, then
             a target is generated, represented as the coordinates (row, col) 
             that the agent will direct its behaviour towards as long as it
-            remains curious.
+            remains curious. Otherwise set to None.
         vcurious (numpy array): A transient value function that directs the 
             learner towards the target (set through value iteration) when the 
             learner is curious, and is zero everywhere otherwise.
@@ -121,13 +121,13 @@ class CuriousTDLearner(GridworldTDLearner):
     def __init__(self, side_lengths, target_row=1):
         """Initialize a new CuriousTDLearner
 
-        
+
         """
         super().__init__(side_lengths)
 
         assert target_row < side_lengths[0]
 
-        self.curiosity_inducing_state = (side_lengths[1]//2, side_lengths[1]//2)
+        self.curiosity_inducing_state = (side_lengths[0]//2, side_lengths[1]//2)
         self.target = None
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
@@ -152,12 +152,6 @@ class CuriousTDLearner(GridworldTDLearner):
 
         if self.is_curiosity_inducing(next_state):
             pass
-            # print("Bookstore? Agent at", next_state)
-            # plot_heatmap(self.V, title="Permanent Value", target=self.target,
-            #     spawn=self.curiosity_inducing_state, start=self.model.start_pos, agent=next_state)
-            # plot_heatmap(self.vcurious, title="Transient Value", target=self.target,
-            #     spawn=self.curiosity_inducing_state, start=self.model.start_pos, agent=next_state)
-
 
 
     def get_action(self, state, epsilon=0):
@@ -184,8 +178,19 @@ class CuriousTDLearner(GridworldTDLearner):
             chosen_action = choice(self.model.actions)
         return chosen_action
 
-    def is_curiosity_inducing(self, pos):
-        if pos == self.curiosity_inducing_state and self.target == None:
+    def is_curiosity_inducing(self, state):
+        """ If state induces curiosity, sets up curiosity target, reward, value
+
+        Note that the curiosity_inducing_state only induces curiosity when the 
+        learner isn't already curious!
+
+        Args:
+            state (tuple)
+
+        Returns:
+            bool
+        """
+        if state == self.curiosity_inducing_state and self.target == None:
             new_target_col = np.random.randint(0,self.side_lengths[1])
             self.target = (self.target_row, new_target_col)
 
@@ -197,8 +202,19 @@ class CuriousTDLearner(GridworldTDLearner):
             return True
         return False
 
-    def is_target(self, pos):
-        if pos == self.target:
+    def get_all_possible_targets(self):
+        return [(self.target_row, col) for col in range(self.side_lengths[1])]
+
+    def is_target(self, state):
+        """ If state is the target, zeros out curiosity reward and value
+
+        Args:
+            state (tuple)
+
+        Returns:
+            bool
+        """
+        if state == self.target:
             self.target = None
 
             self.rcurious.fill(0)
