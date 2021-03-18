@@ -16,6 +16,7 @@ class SimpleGridWorld(object):
         self.start_pos = (side_lengths[0]-2, int(side_lengths[1]/2))
 
         self.pos = self.start_pos
+        self.next_pos = None
         self.dimensions = side_lengths
         self.state_array = np.zeros(self.dimensions, dtype=np.bool_)
         self.visit_array = np.zeros(self.dimensions, dtype=np.int_)
