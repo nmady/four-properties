@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import seaborn as sns
+import os
 
 def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, display="Show"):
   ## Code adapted from the charts tutorial to generate the heatmap
@@ -25,4 +26,8 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
   if display == "Show":
   	plt.show()
   elif display == "Save":
+    file_path = "./output/"
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     plt.savefig("output/"+title+".png")
