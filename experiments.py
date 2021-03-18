@@ -6,7 +6,7 @@ import numpy as np
 
 def basic_timestep(world, learner, stepnum=None):
     if (type(stepnum) is int and stepnum%100==0):
-        print(".",end="")
+        print(".",end="",flush=True)
     world.visit(world.pos)
     action = learner.get_action(world.pos, epsilon=0.2)
     world.next_pos = world.get_next_state(world.pos, action)
@@ -25,7 +25,7 @@ def batch_run_experiment(trials=1,steps=1000, dimensions = (11,11)):
         print("\nTrial",n)
         random.seed(n)
         learner, world, inducer_over_time, avg_target_over_time = basic_experiment(steps, dimensions)
-        postfix="trial"+str(n)+"_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+        postfix="_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)+"_trial"+str(n)
         plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
         plot_heatmap(world.visit_array, title="Visits",display="Save",savepostfix=postfix)
 
@@ -45,8 +45,8 @@ def batch_run_experiment(trials=1,steps=1000, dimensions = (11,11)):
     plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
+    
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
-
     plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
@@ -74,6 +74,6 @@ def basic_experiment(steps=1000, dimensions = (11,11)):
     return learner, world, inducer_over_time, avg_target_over_time
 
 if __name__=="__main__":
-    batch_run_experiment(trials=5,steps=500, dimensions = (11,11))
+    batch_run_experiment(trials=30,steps=200, dimensions = (11,11))
 
 
