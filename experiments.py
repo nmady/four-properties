@@ -1,14 +1,40 @@
 from agents import CuriousTDLearner
 from environments import SimpleGridWorld
 from visualization import plot_heatmap
+import random
+import numpy as np
 
 def batch_run_experiment(trials=1,steps=1000, dimensions = (11,11)):
+    value_stacked = None
+    visit_stacked = None
     for n in range(trials):
+        print("\nTrial",n)
+        random.seed(n)
         learner, world = basic_experiment(steps, dimensions)
         postfix="trial"+str(n)+"_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
         plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
         plot_heatmap(world.visit_array, title="Visits",display="Save",savepostfix=postfix)
-        #print(learner.V)
+
+        if value_stacked is None:
+            value_stacked = [learner.V]
+        else:
+            value_stacked.append(learner.V)
+
+        if visit_stacked is None:
+            visit_stacked = [world.visit_array]
+        else:
+            visit_stacked.append(world.visit_array)
+
+    postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
+    postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
+    postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+
+    plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
+    postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
+        
 
 def basic_experiment(steps=1000, dimensions = (11,11)):
     gridworld_dimensions = dimensions
@@ -21,7 +47,7 @@ def basic_experiment(steps=1000, dimensions = (11,11)):
         
     for i in range(total_steps):
         if i%100==0:
-            print("Step ",i)
+            print(".",end = '')
         world.visit(world.pos)
         action = learner.get_action(world.pos, epsilon=0.2)
         world.next_pos = world.get_next_state(world.pos, action)
@@ -32,9 +58,9 @@ def basic_experiment(steps=1000, dimensions = (11,11)):
             world.visit(world.next_pos)
             world.next_pos = world.start_pos
         world.pos = world.next_pos
-    print("Run Finished")
+    print("Trial Finished")
     return learner, world
 
 if __name__=="__main__":
-    batch_run_experiment(trials=2,steps=1000, dimensions = (11,11))
+    batch_run_experiment(trials=5,steps=500, dimensions = (11,11))
 

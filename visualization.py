@@ -31,3 +31,4 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     if not os.path.exists(directory):
         os.makedirs(directory)
     plt.savefig("output/"+title+"_"+savepostfix+".png")
+    plt.close()
