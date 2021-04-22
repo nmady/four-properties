@@ -59,6 +59,7 @@ class GridworldTDLearner(object):
 
         self.reset(True)
       
+
     def reset(self, zero_weights=False):
         """ Zero eligibility trace and/or value "vectors" for a new episode
 
@@ -70,6 +71,7 @@ class GridworldTDLearner(object):
         if zero_weights:
           self.V = np.zeros(self.side_lengths)
       
+
     def update(self, state: tuple, next_state: tuple, reward, gamma):
         """TD update V based on the transition from state to next_state
         
@@ -90,6 +92,7 @@ class GridworldTDLearner(object):
         self.delta = self.reward + gamma*self.V[next_state] - self.V[state]
         # self.e = gamma*self.lam*self.e + state
         self.V[state] += self.alpha*self.delta
+
 
 class CuriousTDLearner(GridworldTDLearner):
     """A GridworldTDLearner with simple specific curiosity demonstration.
@@ -118,7 +121,7 @@ class CuriousTDLearner(GridworldTDLearner):
         
     """
 
-    def __init__(self, side_lengths, target_row=1):
+    def __init__(self, side_lengths, target_row=1, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
         """Initialize a new CuriousTDLearner
 
 
@@ -126,6 +129,13 @@ class CuriousTDLearner(GridworldTDLearner):
         super().__init__(side_lengths)
 
         assert target_row < side_lengths[0]
+
+        self.directed = directed
+        self.voluntary = voluntary
+        self.aversive = aversive
+        self.ceases = ceases
+        self.positive = positive
+        self.decays = decays
 
         self.curiosity_inducing_state = (side_lengths[0]//2, side_lengths[1]//2)
         self.target = None
@@ -147,7 +157,8 @@ class CuriousTDLearner(GridworldTDLearner):
         self.reward = reward
         self.delta = (self.reward + gamma*self.V[next_state] - 
             (self.V[state]+vcurious_at_state))
-        # self.e = gamma*self.lam*self.e + state
+        if not self.voluntary:
+            self.delta = self.reward + gamma*self.V[next_state] - self.V[state]
         self.V[state] += self.alpha*self.delta
 
         if self.is_curiosity_inducing(next_state):
@@ -162,6 +173,10 @@ class CuriousTDLearner(GridworldTDLearner):
 
         pertinent_v = self.vcurious if self.target is not None else self.V
 
+        # For ablation study removing directed behaviour (see also epsilon greedy below)
+        if not self.directed:
+            pertinent_v = self.V
+
         for action in self.model.actions:
             result_state = self.model.get_next_state(state, action)
             # requires that the reward is zero
@@ -174,9 +189,11 @@ class CuriousTDLearner(GridworldTDLearner):
         chosen_action = choice(best_actions)
 
         # only behave epsilon-greedily if not curious (ie self.target is None)
-        if (np.random.rand() < epsilon) and (self.target is None):
+        # (or if we're ablating directed behaviour...)
+        if (np.random.rand() < epsilon) and ((self.target is None) or (self.directed is False)):
             chosen_action = choice(self.model.actions)
         return chosen_action
+
 
     def is_curiosity_inducing(self, state):
         """ If state induces curiosity, sets up curiosity target, reward, value
@@ -197,13 +214,24 @@ class CuriousTDLearner(GridworldTDLearner):
             self.rcurious = np.full(self.side_lengths, -1)
             self.rcurious[self.target] = 0
 
+            # Ablation study: removing aversive quality
+            if not self.aversive:
+                self.rcurious = np.zeros(self.side_lengths)
+
+                # Testing to see how different things are when experience is of 
+                # a positive reward upon satisfying curiosity.
+                if self.positive:
+                    self.rcurious[self.target] = 1
+
             self.vcurious = self.model.value_iteration(self.rcurious, 
                                                         gamma=0.9)
             return True
         return False
 
+
     def get_all_possible_targets(self):
         return [(self.target_row, col) for col in range(self.side_lengths[1])]
+
 
     def is_target(self, state):
         """ If state is the target, zeros out curiosity reward and value
@@ -214,12 +242,27 @@ class CuriousTDLearner(GridworldTDLearner):
         Returns:
             bool
         """
-        if state == self.target:
-            self.target = None
 
-            self.rcurious.fill(0)
+        decay_rate = 0.8
+        eps = 0.1
 
-            self.vcurious.fill(0)
+        if (state == self.target):
+            if self.ceases:
+                self.target = None
 
-            return True
+                self.rcurious.fill(0)
+
+                self.vcurious.fill(0)
+
+                return True
+            if self.decays:
+
+                # check to see if rcurious is basically zero.
+                if np.any(np.absolute(self.rcurious) < eps):
+
+                    self.target = None
+
+                self.rcurious = self.rcurious * decay_rate
+                self.vcurious = self.model.value_iteration(self.rcurious, 
+                                                        gamma=0.9)
         return False
