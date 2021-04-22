@@ -208,7 +208,10 @@ class CuriousTDLearner(GridworldTDLearner):
             bool
         """
         if state == self.curiosity_inducing_state and self.target == None:
-            new_target_col = np.random.randint(0,self.side_lengths[1])
+
+            # Targets are not allowed to be right next to the wall!
+            new_target_col = np.random.randint(1,self.side_lengths[1]-1)
+            
             self.target = (self.target_row, new_target_col)
 
             self.rcurious = np.full(self.side_lengths, -1)
