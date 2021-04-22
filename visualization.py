@@ -32,3 +32,23 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
         os.makedirs(directory)
     plt.savefig("output/"+title+"_"+savepostfix+".png")
     plt.close()
+
+def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
+  plt.figure(dpi=200)
+  ax = sns.lineplot(x=x, y=y)
+  if title:    
+    plt.title(title)
+  if xlabel:
+    ax.set_xlabel(xlabel)
+  if ylabel:
+    ax.set_ylabel(ylabel)
+  if display == "Show":
+    plt.show()
+  elif display == "Save":
+    file_path = "./output/"
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    plt.savefig("output/"+title+"_"+savepostfix+".png")
+    plt.close()
+

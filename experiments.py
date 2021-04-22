@@ -1,6 +1,6 @@
 from agents import CuriousTDLearner, GridworldTDLearner
 from environments import SimpleGridWorld
-from visualization import plot_heatmap
+from visualization import plot_heatmap, plot_lineplot
 import typer
 from enum import Enum
 import random
@@ -68,6 +68,12 @@ def batch_run_experiment(
             visit_stacked.append(world.visit_array)
             
         print(inducer_over_time.mean(),avg_target_over_time.mean())
+        print("Max at bookstore:", inducer_over_time.max(), "Max at targets:", avg_target_over_time.max())
+        plot_lineplot(range(steps), inducer_over_time, 
+            title="Inducer Value", 
+            xlabel="Time", ylabel="Value of the Bookstore", 
+            display="Save",
+            savepostfix=postfix)
 
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
