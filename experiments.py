@@ -54,8 +54,8 @@ def batch_run_experiment(
         postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
         postfix += "_steps"+str(steps)+"_trial"+str(n)
         postfix += ablation_postfix
-        plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
-        plot_heatmap(world.visit_array, title="Visits",display="Save",savepostfix=postfix)
+        plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, display="Save",savepostfix=postfix)
+        plot_heatmap(world.visit_array, title="Visits", cmap="bone", vmin=0, vmax=steps//10, display="Save",savepostfix=postfix)
 
         if value_stacked is None:
             value_stacked = [learner.V]
@@ -71,17 +71,17 @@ def batch_run_experiment(
 
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
     plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
     
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//10, agent=None, title="Visits", display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", display="Save",savepostfix=postfix)
         
 
 def basic_experiment(steps=1000, dimensions = (11,11), learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
