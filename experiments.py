@@ -32,25 +32,28 @@ def batch_run_experiment(
 ):
     value_stacked = None
     visit_stacked = None
+
+    ablation_postfix = ""
+    if not directed:
+        ablation_postfix += "_no_directed"
+    if not voluntary:
+        ablation_postfix += "_no_voluntary"
+    if not aversive:
+        ablation_postfix += "_no_aversive"
+    if not ceases:
+        ablation_postfix += "_no_ceases"
+    if positive:
+        ablation_postfix += "_yes_positive"
+    if decays:
+        ablation_postfix += "_yes_decays"
+
     for n in range(trials):
         print("\nTrial",n)
         random.seed(n)
         learner, world, inducer_over_time, avg_target_over_time = basic_experiment(steps, dimensions, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
-        postfix=""
-        postfix+="_"+str(dimensions[0])+"_"+str(dimensions[1])
-        postfix+="_steps"+str(steps)+"_trial"+str(n)
-        if not directed:
-            postfix += "_no_directed"
-        if not voluntary:
-            postfix += "_no_voluntary"
-        if not aversive:
-            postfix += "_no_aversive"
-        if not ceases:
-            postfix += "_no_ceases"
-        if positive:
-            postfix += "_yes_positive"
-        if decays:
-            postfix += "_yes_decays"
+        postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
+        postfix += "_steps"+str(steps)+"_trial"+str(n)
+        postfix += ablation_postfix
         plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
         plot_heatmap(world.visit_array, title="Visits",display="Save",savepostfix=postfix)
 
@@ -67,13 +70,17 @@ def batch_run_experiment(
         print(inducer_over_time.mean(),avg_target_over_time.mean())
 
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix += ablation_postfix
     plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix += ablation_postfix
     plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
     
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix += ablation_postfix
     plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix += ablation_postfix
     plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Visits", display="Save",savepostfix=postfix)
         
 
