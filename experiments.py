@@ -70,8 +70,13 @@ def batch_run_experiment(
         print(inducer_over_time.mean(),avg_target_over_time.mean())
         print("Max at bookstore:", inducer_over_time.max(), "Max at targets:", avg_target_over_time.max())
         plot_lineplot(range(steps), inducer_over_time, 
-            title="Inducer Value", 
-            xlabel="Time", ylabel="Value of the Bookstore", 
+            title="Value of Curosity-inducing State", 
+            xlabel="Time", ylabel="Value", 
+            display="Save",
+            savepostfix=postfix)
+        plot_lineplot(range(steps), avg_target_over_time, 
+            title="Average Value of All Possible Targets", 
+            xlabel="Time", ylabel="Value", 
             display="Save",
             savepostfix=postfix)
 
