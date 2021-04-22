@@ -74,6 +74,6 @@ def basic_experiment(steps=1000, dimensions = (11,11)):
     return learner, world, inducer_over_time, avg_target_over_time
 
 if __name__=="__main__":
-    batch_run_experiment(trials=30,steps=200, dimensions = (11,11))
+    batch_run_experiment(trials=30,steps=5000, dimensions = (101,11))
 
 
