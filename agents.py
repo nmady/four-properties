@@ -128,7 +128,7 @@ class CuriousTDLearner(GridworldTDLearner):
         """
         super().__init__(side_lengths)
 
-        assert target_row < side_lengths[0]
+        assert 0 <= target_row < side_lengths[0]
 
         self.directed = directed
         self.voluntary = voluntary
@@ -137,7 +137,7 @@ class CuriousTDLearner(GridworldTDLearner):
         self.positive = positive
         self.decays = decays
 
-        self.curiosity_inducing_state = (side_lengths[0]//2, side_lengths[1]//2)
+        self.curiosity_inducing_state = (side_lengths[0]-6, side_lengths[1]//2)
         self.target = None
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
