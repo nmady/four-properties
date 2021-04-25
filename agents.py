@@ -233,7 +233,7 @@ class CuriousTDLearner(GridworldTDLearner):
 
 
     def get_all_possible_targets(self):
-        return [(self.target_row, col) for col in range(self.side_lengths[1])]
+        return [(self.target_row, col) for col in range(1,self.side_lengths[1]-1)]
 
 
     def is_target(self, state):

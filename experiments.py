@@ -1,10 +1,11 @@
 from agents import CuriousTDLearner, GridworldTDLearner
 from environments import SimpleGridWorld
-from visualization import plot_heatmap, plot_lineplot
+from visualization import plot_heatmap, plot_lineplot, plot_lineplot_data
 import typer
 from enum import Enum
 import random
 import numpy as np
+import pandas as pd
 
 
 def basic_timestep(world, learner, stepnum=None):
@@ -30,8 +31,16 @@ def batch_run_experiment(
                 directed=True, voluntary=True, aversive=True, ceases=True,
                 positive=False, decays=False
 ):
+    
+    # These "_stacked" variables will hold data for plotting aggregate data over
+    # the batch of experiments. The first two are for heatmaps, which the second
+    # two are for lineplots.
     value_stacked = None
     visit_stacked = None
+    inducer_stacked = None
+    targets_stacked = None
+    df_stacked = None
+    value_df = pd.DataFrame({"trial":[], "value":[], "type":[]})
 
     ablation_postfix = ""
     if not directed:
@@ -66,8 +75,30 @@ def batch_run_experiment(
             visit_stacked = [world.visit_array]
         else:
             visit_stacked.append(world.visit_array)
+
+        df_inducer = pd.DataFrame({"Value":inducer_over_time, "Time":range(steps)})
+        df_inducer["Trial"] = n
+        df_inducer["Type"] = "Curiosity-inducing State"
+        df_targets = pd.DataFrame({"Value":avg_target_over_time, "Time":range(steps)})
+        df_targets["Trial"] = n
+        df_targets["Type"] = "Targets (Averaged)"
+        if df_stacked is None:
+            df_stacked = [df_inducer, df_targets]
+        else:
+            df_stacked.append(df_inducer)
+            df_stacked.append(df_targets)
+        if inducer_stacked is None:
+            inducer_stacked = [inducer_over_time]
+        else:
+            inducer_stacked.append(inducer_over_time)
+        if targets_stacked is None:
+            targets_stacked = [avg_target_over_time]
+        else:
+            targets_stacked.append(avg_target_over_time)
+
+
             
-        print(inducer_over_time.mean(),avg_target_over_time.mean())
+        print("Mean at bookstore:", inducer_over_time.mean(), "Mean at targets:", avg_target_over_time.mean())
         print("Max at bookstore:", inducer_over_time.max(), "Max at targets:", avg_target_over_time.max())
         plot_lineplot(range(steps), inducer_over_time, 
             title="Value of Curosity-inducing State", 
@@ -94,6 +125,14 @@ def batch_run_experiment(
     postfix += ablation_postfix
     plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", display="Save",savepostfix=postfix)
         
+    postfix="stackedLineplot_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix += ablation_postfix
+    plot_lineplot_data(pd.concat(df_stacked),
+        title="Value over Time", 
+        xlabel="Time", ylabel="Value", 
+        display="Save",
+        savepostfix=postfix)
+
 
 def basic_experiment(steps=1000, dimensions = (11,11), learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
     gridworld_dimensions = dimensions
