@@ -13,7 +13,7 @@ class SimpleGridWorld(object):
         """
 
         # Start position is always in the middle, in the second from bottom row
-        self.start_pos = (side_lengths[0]-2, int(side_lengths[1]/2))
+        self.start_pos = (side_lengths[0]-2, side_lengths[1]//2)
 
         self.pos = self.start_pos
         self.next_pos = None
