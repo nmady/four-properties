@@ -4,11 +4,14 @@ import matplotlib.patches as patches
 import seaborn as sns
 import os
 
-def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, display="Show",savepostfix=""):
+def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
-  plt.figure(dpi=200)
-  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax)
+  if figsize is not None:
+    plt.figure(figsize=figsize,dpi=200, tight_layout=True)
+  else:
+    plt.figure(dpi=200)
+  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True)
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
     ax.add_patch(rect)

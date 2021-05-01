@@ -27,6 +27,7 @@ def batch_run_experiment(
                 trials=1,
                 steps=1000, 
                 dimensions = (11,11), 
+                figsize=None,
                 learner_type=CuriousTDLearner, 
                 directed=True, voluntary=True, aversive=True, ceases=True,
                 positive=False, decays=False
@@ -38,7 +39,6 @@ def batch_run_experiment(
     value_stacked = None
     visit_stacked = None
     inducer_stacked = None
-    targets_stacked = None
     df_stacked = None
     value_df = pd.DataFrame({"trial":[], "value":[], "type":[]})
 
@@ -59,12 +59,12 @@ def batch_run_experiment(
     for n in range(trials):
         print("\nTrial",n)
         random.seed(n)
-        learner, world, inducer_over_time, avg_target_over_time = basic_experiment(steps, dimensions, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
+        learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
         postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
         postfix += "_steps"+str(steps)+"_trial"+str(n)
         postfix += ablation_postfix
-        plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, display="Save",savepostfix=postfix)
-        plot_heatmap(world.visit_array, title="Visits", cmap="bone", vmin=0, vmax=steps//10, display="Save",savepostfix=postfix)
+        plot_heatmap(learner.V, target=learner.target, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=world.next_pos, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, figsize=figsize, display="Save",savepostfix=postfix)
+        plot_heatmap(world.visit_array, title="Visits", cmap="bone", vmin=0, vmax=steps//10, figsize=figsize, display="Save",savepostfix=postfix)
 
         if value_stacked is None:
             value_stacked = [learner.V]
@@ -79,9 +79,14 @@ def batch_run_experiment(
         df_inducer = pd.DataFrame({"Value":inducer_over_time, "Time":range(steps)})
         df_inducer["Trial"] = n
         df_inducer["Type"] = "Curiosity-inducing State"
-        df_targets = pd.DataFrame({"Value":avg_target_over_time, "Time":range(steps)})
+        df_target_frame = []
+        for target_num, vector in enumerate(targets_over_time.transpose()):
+            df_target_temp = pd.DataFrame({"Value":vector, "Time":range(steps)})
+            df_target_temp["Target"] = target_num
+            df_target_frame.append(df_target_temp)
+        df_targets = pd.concat(df_target_frame)
         df_targets["Trial"] = n
-        df_targets["Type"] = "Targets (Averaged)"
+        df_targets["Type"] = "Target"
         if df_stacked is None:
             df_stacked = [df_inducer, df_targets]
         else:
@@ -91,43 +96,34 @@ def batch_run_experiment(
             inducer_stacked = [inducer_over_time]
         else:
             inducer_stacked.append(inducer_over_time)
-        if targets_stacked is None:
-            targets_stacked = [avg_target_over_time]
-        else:
-            targets_stacked.append(avg_target_over_time)
-
-
             
-        print("Mean at bookstore:", inducer_over_time.mean(), "Mean at targets:", avg_target_over_time.mean())
-        print("Max at bookstore:", inducer_over_time.max(), "Max at targets:", avg_target_over_time.max())
+        print("Mean at bookstore:", inducer_over_time.mean(), 
+            "Mean over targets:", targets_over_time.mean())
+        print("Max at bookstore:", inducer_over_time.max(),
+            "Max over targets:", targets_over_time.max())
         plot_lineplot(range(steps), inducer_over_time, 
             title="Value of Curosity-inducing State", 
             xlabel="Time", ylabel="Value", 
             display="Save",
             savepostfix=postfix)
-        plot_lineplot(range(steps), avg_target_over_time, 
-            title="Average Value of All Possible Targets", 
-            xlabel="Time", ylabel="Value", 
-            display="Save",
-            savepostfix=postfix)
 
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, figsize=figsize, display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",figsize=figsize, display="Save",savepostfix=postfix)
     
     postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//10, agent=None, title="Visits", display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//10, agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", display="Save",savepostfix=postfix)
+    plot_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
         
     postfix="stackedLineplot_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
-    plot_lineplot_data(pd.concat(df_stacked),
+    plot_lineplot_data(pd.concat(df_stacked, sort=False),
         title="Value over Time", 
         xlabel="Time", ylabel="Value", 
         display="Save",
@@ -142,18 +138,18 @@ def basic_experiment(steps=1000, dimensions = (11,11), learner_type=CuriousTDLea
     learner = learner_type(gridworld_dimensions, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
 
     inducer_over_time = np.zeros(total_steps)
-    avg_target_over_time = np.zeros(total_steps)
     all_targets = learner.get_all_possible_targets()
+    targets_over_time = np.zeros((total_steps, len(all_targets)))
 
     print("Start pos:", world.start_pos)
         
     for i in range(total_steps):
         basic_timestep(world, learner, stepnum=i)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
-        avg_target_over_time[i] = np.mean(np.array([learner.V[t] for t in all_targets]))
+        targets_over_time[i] = [learner.V[t] for t in all_targets]
         
     print("Trial Finished")
-    return learner, world, inducer_over_time, avg_target_over_time
+    return learner, world, inducer_over_time, targets_over_time
 
 class LearnerType(str, Enum):
     CuriousTDLearner = "CuriousTDLearner"
@@ -165,6 +161,8 @@ def main(
     steps: int = typer.Option(200, help="Number of steps in each trial."),
     width: int = typer.Option(11, help="Width of gridworld."),
     height: int = typer.Option(11, help="Height of gridworld."),
+    figwidth: float = typer.Option(None, help="Width of heatmap figures in inches"),
+    figheight: float = typer.Option(None, help="Height of heatmap figure in inches"),
     learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, help="Type of learner to experiment with"),
     directed: bool = typer.Option(True, help="Set to False to ablate directed behaviour."),
     voluntary: bool = typer.Option(True, help="Set to False to ablate voluntary."),
@@ -185,9 +183,16 @@ def main(
         l_type = GridworldTDLearner
     assert not (aversive and positive)
     assert not (ceases and decays)
+    if ((figwidth is not None and figheight is None) or 
+        (figheight is not None and figwidth is None)):
+        raise ValueError(
+            "We need both figwidth and figheight to set figsize."
+            )
     batch_run_experiment(
         trials=trials, steps=steps,
-        dimensions=(height, width), learner_type=l_type,
+        dimensions=(height, width), 
+        figsize=(figwidth, figheight),
+        learner_type=l_type,
         directed=directed, voluntary=voluntary,
         aversive=aversive,
         ceases=ceases, positive=positive, decays=decays
