@@ -58,6 +58,7 @@ def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show
 def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
   plt.figure(dpi=200)
   ax = sns.lineplot(x=x, y=y)
+  # sns.despine(ax)
   if title:    
     plt.title(title)
   if xlabel:

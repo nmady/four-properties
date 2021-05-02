@@ -188,10 +188,14 @@ def main(
         raise ValueError(
             "We need both figwidth and figheight to set figsize."
             )
+    if figwidth is None and figheight is None:
+        figsize = None
+    else:
+        figsize = (figwidth, figheight)
     batch_run_experiment(
         trials=trials, steps=steps,
         dimensions=(height, width), 
-        figsize=(figwidth, figheight),
+        figsize=figsize,
         learner_type=l_type,
         directed=directed, voluntary=voluntary,
         aversive=aversive,
