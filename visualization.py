@@ -39,7 +39,7 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
 def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
   plt.figure(dpi=200)
   ax = sns.lineplot(data=data, y="Value", x="Time", hue="Type")
-  sns.despine(ax=ax)
+  sns.despine(ax=ax, offset=1, trim=True)
   if title:    
     plt.title(title)
   if xlabel:
@@ -59,6 +59,7 @@ def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show
 def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
   plt.figure(dpi=200)
   ax = sns.lineplot(x=x, y=y)
+  sns.despine(ax=ax, offset=1, trim=True)
   if title:    
     plt.title(title)
   if xlabel:
