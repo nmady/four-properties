@@ -3,7 +3,6 @@ from environments import SimpleGridWorld
 from visualization import plot_heatmap, plot_lineplot, plot_lineplot_data
 import typer
 from enum import Enum
-import random
 import numpy as np
 import pandas as pd
 
@@ -58,7 +57,6 @@ def batch_run_experiment(
 
     for n in range(trials):
         print("\nTrial",n)
-        random.seed(n)
         learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
         postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
         postfix += "_steps"+str(steps)+"_trial"+str(n)

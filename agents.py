@@ -3,7 +3,6 @@ import numpy as np
 from environments import SimpleGridWorld
 from visualization import plot_heatmap
 
-from random import choice
 from itertools import product
 
 
@@ -144,6 +143,8 @@ class CuriousTDLearner(GridworldTDLearner):
         self.target_row = target_row
         self.model = SimpleGridWorld(side_lengths)
 
+        self.rng = np.random.default_rng(2021)
+
 
     def update(self, state, next_state, reward, gamma):
         """
@@ -186,12 +187,15 @@ class CuriousTDLearner(GridworldTDLearner):
                 max_qval = qval
             elif qval == max_qval:
                 best_actions.append(action)
-        chosen_action = choice(best_actions)
+        rindex = self.rng.integers(low=0, high=len(best_actions))
+        chosen_action = best_actions[rindex]
 
         # only behave epsilon-greedily if not curious (ie self.target is None)
         # (or if we're ablating directed behaviour...)
-        if (np.random.rand() < epsilon) and ((self.target is None) or (self.directed is False)):
-            chosen_action = choice(self.model.actions)
+        if (self.rng.random() < epsilon) and ((self.target is None) or (self.directed is False)):
+            rindex = self.rng.integers(low=0, high=len(self.model.actions))
+            chosen_action = self.model.actions[rindex]
+
         return chosen_action
 
 
@@ -210,7 +214,7 @@ class CuriousTDLearner(GridworldTDLearner):
         if state == self.curiosity_inducing_state and self.target == None:
 
             # Targets are not allowed to be right next to the wall!
-            new_target_col = np.random.randint(1,self.side_lengths[1]-1)
+            new_target_col = self.rng.integers(low=1,high=self.side_lengths[1]-1)
             
             self.target = (self.target_row, new_target_col)
 
