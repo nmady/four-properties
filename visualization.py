@@ -33,7 +33,10 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
-    plt.savefig("output/"+title+"_"+savepostfix+".png")
+
+    # Note that using the replace() method turns spaces into underscores, which
+    # appears to be more LaTeX-import friendly.
+    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png")
     plt.close()
 
 def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
@@ -53,7 +56,10 @@ def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
-    plt.savefig("output/"+title+"_"+savepostfix+".png")
+
+    # Note that using the replace() method turns spaces into underscores, which
+    # appears to be more LaTeX-import friendly.
+    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png")
     plt.close()
 
 def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
@@ -74,6 +80,10 @@ def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",sav
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
-    plt.savefig("output/"+title+"_"+savepostfix+".png")
+
+    # Note that using the replace() method turns spaces into underscores, which
+    # appears to be more LaTeX-import friendly.
+    plt.savefig("output/"+title.replace(" ", "_")
+      +"_"+savepostfix.replace(" ", "_")+".png")
     plt.close()
 
