@@ -9,7 +9,7 @@ import pandas as pd
 
 def basic_timestep(world, learner, stepnum=None):
     if (type(stepnum) is int and stepnum%100==0):
-        print(".",end="",flush=True)
+        print(".", end="", flush=True)
     world.visit(world.pos)
     action = learner.get_action(world.pos, epsilon=0.2)
     world.next_pos = world.get_next_state(world.pos, action)

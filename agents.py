@@ -211,7 +211,7 @@ class CuriousTDLearner(GridworldTDLearner):
 
         # only behave epsilon-greedily if not curious (ie self.target is None)
         # (or if we're ablating directed behaviour...)
-        if (self.rng.random() < epsilon) and ((self.target is None) or (self.directed is False)):
+        if (self.rng.random() < epsilon) and ((self.target is None) or (not self.directed)):
             rindex = self.rng.integers(low=0, high=len(self.model.actions))
             chosen_action = self.model.actions[rindex]
 
@@ -273,6 +273,7 @@ class CuriousTDLearner(GridworldTDLearner):
         eps = 0.1
 
         if (state == self.target):
+            print('x', end="", flush=True)
             if self.ceases:
                 self.target = None
 
