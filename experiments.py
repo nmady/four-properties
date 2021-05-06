@@ -29,7 +29,8 @@ def batch_run_experiment(
                 figsize=None,
                 learner_type=CuriousTDLearner, 
                 directed=True, voluntary=True, aversive=True, ceases=True,
-                positive=False, decays=False
+                positive=False, decays=False,
+                flip_update=False
 ):
     
     # These "_stacked" variables will hold data for plotting aggregate data over
@@ -59,7 +60,7 @@ def batch_run_experiment(
 
     for n in range(trials):
         print("\nTrial",n)
-        learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, rng=rng, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
+        learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, rng=rng, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays, flip_update=flip_update)
         postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
         postfix += "_steps"+str(steps)+"_trial"+str(n)
         postfix += ablation_postfix
@@ -130,12 +131,12 @@ def batch_run_experiment(
         savepostfix=postfix)
 
 
-def basic_experiment(steps=1000, dimensions = (11,11), rng=None, learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
+def basic_experiment(steps=1000, dimensions = (11,11), rng=None, learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False, flip_update=False):
     gridworld_dimensions = dimensions
     total_steps = steps
         
     world = SimpleGridWorld(gridworld_dimensions)
-    learner = learner_type(gridworld_dimensions, rng=rng, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
+    learner = learner_type(gridworld_dimensions, rng=rng, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays, flip_update=flip_update)
 
     inducer_over_time = np.zeros(total_steps)
     all_targets = learner.get_all_possible_targets()
@@ -168,8 +169,9 @@ def main(
     voluntary: bool = typer.Option(True, help="Set to False to ablate voluntary."),
     aversive: bool = typer.Option(True, help="Set to False to ablate aversive quality."),
     ceases: bool = typer.Option(True, help="Set to False to ablate ceases when satisfied."),
-    positive: bool = typer.Option(False, help="Set to True to make satisfying curiosity rewarding. The parameter 'aversive' must be set to False."),
-    decays: bool = typer.Option(False, help="Set to True to make satisfying curiosity a slow decay. The parameter 'ceases' must be set to False.")
+    positive: bool = typer.Option(False, help="Set to True to make the target have positive value/reward. The parameter 'aversive' must be set to False."),
+    decays: bool = typer.Option(False, help="Set to True to make satisfying curiosity a slow decay. The parameter 'ceases' must be set to False."),
+    flip_update: bool = typer.Option(False, help="Set to True to make the TD-update a value bonus (add instead of subtract the curiosity-value).")
 ):
     """
     Run a batch of experiments.
@@ -199,7 +201,8 @@ def main(
         learner_type=l_type,
         directed=directed, voluntary=voluntary,
         aversive=aversive,
-        ceases=ceases, positive=positive, decays=decays
+        ceases=ceases, positive=positive, decays=decays,
+        flip_update=flip_update
     )
 
 if __name__ == "__main__":

@@ -120,7 +120,7 @@ class CuriousTDLearner(GridworldTDLearner):
         
     """
 
-    def __init__(self, side_lengths, rng=None, target_row=1, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
+    def __init__(self, side_lengths, rng=None, target_row=1, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False, flip_update=False):
         """Initialize a new CuriousTDLearner
 
 
@@ -135,6 +135,7 @@ class CuriousTDLearner(GridworldTDLearner):
         self.ceases = ceases
         self.positive = positive
         self.decays = decays
+        self.flip_update = flip_update
 
         self.curiosity_inducing_state = (side_lengths[0]-6, side_lengths[1]//2)
         self.target = None
@@ -152,15 +153,26 @@ class CuriousTDLearner(GridworldTDLearner):
     def update(self, state, next_state, reward, gamma):
         """
         """
-        if self.vcurious is None:
-            vcurious_at_state = 0
-        else:
-            vcurious_at_state = self.vcurious[state]
+
         self.state = state
         self.next_state = next_state
         self.reward = reward
-        self.delta = (self.reward + gamma*self.V[next_state] - 
-            (self.V[state]+vcurious_at_state))
+
+        if self.flip_update:
+            if self.vcurious is None:
+                vcurious_at_next_state = 0
+            else:
+                vcurious_at_next_state = self.vcurious[next_state]
+            self.delta = (self.reward + gamma*(self.V[next_state]+vcurious_at_next_state) - 
+                self.V[state])
+        else:
+            if self.vcurious is None:
+                vcurious_at_state = 0
+            else:
+                vcurious_at_state = self.vcurious[state]
+            self.delta = (self.reward + gamma*self.V[next_state] - 
+                (self.V[state]+vcurious_at_state))
+
         if not self.voluntary:
             self.delta = self.reward + gamma*self.V[next_state] - self.V[state]
         self.V[state] += self.alpha*self.delta
