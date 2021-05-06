@@ -55,9 +55,11 @@ def batch_run_experiment(
     if decays:
         ablation_postfix += "_yes_decays"
 
+    rng = np.random.default_rng(2021)
+
     for n in range(trials):
         print("\nTrial",n)
-        learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
+        learner, world, inducer_over_time, targets_over_time = basic_experiment(steps, dimensions, rng=rng, learner_type=learner_type, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
         postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
         postfix += "_steps"+str(steps)+"_trial"+str(n)
         postfix += ablation_postfix
@@ -128,12 +130,12 @@ def batch_run_experiment(
         savepostfix=postfix)
 
 
-def basic_experiment(steps=1000, dimensions = (11,11), learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
+def basic_experiment(steps=1000, dimensions = (11,11), rng=None, learner_type=CuriousTDLearner, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False):
     gridworld_dimensions = dimensions
     total_steps = steps
         
     world = SimpleGridWorld(gridworld_dimensions)
-    learner = learner_type(gridworld_dimensions, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
+    learner = learner_type(gridworld_dimensions, rng=rng, directed=directed, voluntary=voluntary, aversive=aversive, ceases=ceases, positive=positive, decays=decays)
 
     inducer_over_time = np.zeros(total_steps)
     all_targets = learner.get_all_possible_targets()
