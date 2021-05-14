@@ -1,17 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.colors as colors
 import seaborn as sns
 import os
 
 def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
+
   if figsize is not None:
-    plt.figure(figsize=figsize,dpi=200, tight_layout=True)
+    fig = plt.figure(figsize=figsize,dpi=200, tight_layout=True)
   else:
-    plt.figure(dpi=200)
-  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True)
+    fig = plt.figure(dpi=200)
+  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True, center=0)
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
     ax.add_patch(rect)
@@ -26,8 +28,14 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     ax.add_patch(rect)       
   if title:    
     plt.title(title)
+  return fig, ax
+
+
+def plot_final_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
+  fig, ax = plot_heatmap(data, cmap=cmap,title=title,vmin=vmin,vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, display=display, savepostfix=savepostfix)
+  
   if display == "Show":
-  	plt.show()
+    plt.show()
   elif display == "Save":
     file_path = "./output/"
     directory = os.path.dirname(file_path)
@@ -38,6 +46,21 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     # appears to be more LaTeX-import friendly.
     plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png")
     plt.close()
+
+def plot_interim_heatmap(data, stepnum, cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, savepostfix="vid"):
+  fig, ax = plot_heatmap(data, cmap=cmap, title=title,vmin=vmin,vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, savepostfix=savepostfix)
+
+  ax.text(9, 0, "t="+str(stepnum))
+
+  dirpath = "output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+"/"
+  subdirectory = os.path.dirname("./" + dirpath)
+  if not os.path.exists(subdirectory):
+    os.makedirs(subdirectory)
+  plt.savefig(dirpath+str(stepnum)+".png")
+  plt.close()
+  
+
+    
 
 def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
   plt.figure(dpi=200)

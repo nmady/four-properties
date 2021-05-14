@@ -120,7 +120,10 @@ class CuriousTDLearner(GridworldTDLearner):
         
     """
 
-    def __init__(self, side_lengths, rng=None, target_row=1, directed=True, voluntary=True, aversive=True, ceases=True, positive=False, decays=False, flip_update=False, reward_bonus=False):
+    def __init__(
+        self, side_lengths, rng=None, target_row=1, 
+        directed=True, voluntary=True, aversive=True, ceases=True, 
+        positive=False, decays=False, flip_update=False, reward_bonus=False):
         """Initialize a new CuriousTDLearner
 
 
@@ -193,7 +196,7 @@ class CuriousTDLearner(GridworldTDLearner):
 
         pertinent_v = self.vcurious if self.target is not None else self.V
 
-        # For ablation study removing directed behaviour (see also epsilon greedy below)
+        # Ablate directed behaviour (see also epsilon greedy below)
         if not self.directed:
             pertinent_v = self.V
 
@@ -211,7 +214,8 @@ class CuriousTDLearner(GridworldTDLearner):
 
         # only behave epsilon-greedily if not curious (ie self.target is None)
         # (or if we're ablating directed behaviour...)
-        if (self.rng.random() < epsilon) and ((self.target is None) or (not self.directed)):
+        if ((self.rng.random() < epsilon) 
+                and ((self.target is None) or (not self.directed))):
             rindex = self.rng.integers(low=0, high=len(self.model.actions))
             chosen_action = self.model.actions[rindex]
 
