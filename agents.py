@@ -148,6 +148,9 @@ class CuriousTDLearner(GridworldTDLearner):
         self.target_row = target_row
         self.model = SimpleGridWorld(side_lengths)
 
+        self.num_target_visits = 0      #updated in is_target() method
+        self.target_is_new = False
+
         if rng is not None:
             self.rng = rng
         else:
@@ -240,6 +243,7 @@ class CuriousTDLearner(GridworldTDLearner):
             new_target_col = self.rng.integers(low=1,high=self.side_lengths[1]-1)
             
             self.target = (self.target_row, new_target_col)
+            self.target_is_new = True
 
             self.rcurious = np.full(self.side_lengths, -1)
             self.rcurious[self.target] = 0
@@ -277,7 +281,12 @@ class CuriousTDLearner(GridworldTDLearner):
         eps = 0.1
 
         if (state == self.target):
-            print('x', end="", flush=True)
+            if self.target_is_new:
+                self.num_target_visits += 1
+                self.target_is_new = False
+                print('x', end="", flush=True)
+            else:
+                print('d', end="", flush=True)
             if self.ceases:
                 self.target = None
 

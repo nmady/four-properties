@@ -8,7 +8,15 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import os
+import signal
 
+def keyboardInterruptHandler(signal, frame):
+    print("KeyboardInterrupt (ID: {}) has been caught. Cleaning up...".format(signal))
+    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+        num_target_visits_f.write(",Aborted!\n")
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 def basic_timestep(
         world, 
@@ -103,18 +111,22 @@ def batch_run_experiment(
     df_stacked = None
     value_df = pd.DataFrame({"trial":[], "value":[], "type":[]})
 
+    setup_info = (str(dimensions[0]) + "_" + str(dimensions[1]) 
+                  + "_steps" + str(steps))
     ablation_postfix = get_ablation_postfix(**kwargs)
+
+    if not os.path.exists("./output/num_target_visits.csv"):
+        os.system("touch ./output/num_target_visits.csv")
+    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+        num_target_visits_f.write(setup_info + ablation_postfix + ",")
 
     rng = np.random.default_rng(2021)
 
     for n in range(trials):
         print("\nTrial",n)
-        postfix = "_"+str(dimensions[0])+"_"+str(dimensions[1])
-        postfix += "_steps"+str(steps)+"_trial"+str(n)
-        postfix += ablation_postfix
+        postfix = "_" + setup_info + "_trial" + str(n) + ablation_postfix
 
         anim_postfix = str(postfix)
-        print(anim_postfix)
 
         learner, world, inducer_over_time, targets_over_time = basic_experiment(
             steps, dimensions, 
@@ -123,6 +135,9 @@ def batch_run_experiment(
             animation=animation,
             **kwargs
             )
+
+        with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+            num_target_visits_f.write(str(learner.num_target_visits) + ",")
         
         plot_final_heatmap(
             learner.V, 
@@ -183,6 +198,9 @@ def batch_run_experiment(
                 xlabel="Time", ylabel="Value", 
                 display="Save",
                 savepostfix=postfix)
+
+    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+        num_target_visits_f.write("\n")
 
     postfix = ("stackedMean_" + str(dimensions[0]) + "_" + str(dimensions[1])
         + "_steps"+str(steps))
