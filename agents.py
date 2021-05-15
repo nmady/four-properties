@@ -121,7 +121,7 @@ class CuriousTDLearner(GridworldTDLearner):
     """
 
     def __init__(
-        self, side_lengths, rng=None, target_row=1, 
+        self, side_lengths, model_class=SimpleGridWorld, rng=None, target_row=1, 
         directed=True, voluntary=True, aversive=True, ceases=True, 
         positive=False, decays=False, flip_update=False, reward_bonus=False):
         """Initialize a new CuriousTDLearner
@@ -146,7 +146,7 @@ class CuriousTDLearner(GridworldTDLearner):
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
         self.target_row = target_row
-        self.model = SimpleGridWorld(side_lengths)
+        self.model = model_class(side_lengths)
 
         self.num_target_visits = 0      #updated in is_target() method
         self.target_is_new = False

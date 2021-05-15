@@ -71,7 +71,7 @@ class SimpleGridWorld(object):
 
                 next_value_grid[state] = -np.inf
 
-                for action in product((-1,0,1),(-1,0,1)):
+                for action in self.actions + tuple([(0,0)]):
                     next_state = self.get_next_state(state, action)
                     value = reward_grid[state] + gamma*value_grid[next_state]
                     if value > next_value_grid[state]:
@@ -83,4 +83,32 @@ class SimpleGridWorld(object):
             ''' next_value_grid gets obliterated anyways, so we can use the old 
             value_grid to avoid allocating a new array every time.'''
             value_grid, next_value_grid = next_value_grid, value_grid
+
+class CylinderGridWorld(SimpleGridWorld):
+    """
+    """
+
+    def __init__(self, side_lengths):
+
+        super().__init__(side_lengths)
+
+        #No actions can go down in cylinder world!
+        self.actions = tuple(a for a in product((-1,0),(-1,0,1)) if a!=(0,0))
+
+    def get_next_state(self, state, action):
+        # actions look like tuples that you add to the state to get the new position:
+        #   [-1,0] is left, [1,0] is right, [0, -1] is probably up? [0,1] is probably down
+        ##TODO: consider using np.clip
+
+        assert action in self.actions or action == (0,0)
+
+        new_col = min(max(state[1]+action[1],0), self.dimensions[1]-1)
+        
+        new_row = state[0]+action[0]
+        if new_row == -1:         #Fall off the bottom to get to the top
+            new_row = self.dimensions[0]-1
+        elif new_row == self.dimensions[0]:
+            new_row = 0           #Or fall off the top to get to the bottom
+
+        return (new_row, new_col)
 

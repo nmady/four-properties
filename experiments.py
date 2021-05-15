@@ -1,5 +1,5 @@
 from agents import CuriousTDLearner, GridworldTDLearner
-from environments import SimpleGridWorld
+from environments import SimpleGridWorld, CylinderGridWorld
 from visualization import (
     plot_heatmap, plot_final_heatmap, plot_interim_heatmap,
     plot_lineplot, plot_lineplot_data)
@@ -24,7 +24,8 @@ def basic_timestep(
         stepnum=None, 
         steps=None, 
         savepostfix="",
-        animation=False):
+        animation=False,
+        teleport=True):
     if (type(stepnum) is int and stepnum%100==0):
         print(".", end="", flush=True)
     world.visit(world.pos)
@@ -56,7 +57,7 @@ def basic_timestep(
     world.next_pos = world.get_next_state(world.pos, action)
     reward = world.get_reward()
     learner.update(world.pos, world.next_pos, reward, gamma=0.9)
-    if learner.is_target(world.next_pos):
+    if learner.is_target(world.next_pos) and teleport:
         world.visit(world.next_pos)
         world.next_pos = world.start_pos
     world.pos = world.next_pos
@@ -88,6 +89,12 @@ def get_ablation_postfix(**kwargs):
         elif key == "reward_bonus":
             if value:
                 postfix += "_yes_reward_bonus"
+        elif key == "cylinder":
+            if value:
+                postfix += "_yes_cylinder"
+        elif key == "teleport":
+            if not value:
+                postfix += "_no_teleport"
         else:
             raise ValueError("Key " + key + " is not recognized.")
     return postfix
@@ -242,9 +249,14 @@ def basic_experiment(
         **kwargs):
     gridworld_dimensions = dimensions
     total_steps = steps
-        
-    world = SimpleGridWorld(gridworld_dimensions)
-    learner = learner_type(gridworld_dimensions, rng=rng, **kwargs)
+    
+    teleport = kwargs.pop('teleport')
+    cylinder = kwargs.pop('cylinder')
+    world_type = CylinderGridWorld if cylinder else SimpleGridWorld
+
+    world = world_type(gridworld_dimensions)
+
+    learner = learner_type(gridworld_dimensions, model_class=world_type, rng=rng, **kwargs)
 
     inducer_over_time = np.zeros(total_steps)
     all_targets = learner.get_all_possible_targets()
@@ -255,7 +267,7 @@ def basic_experiment(
     for i in range(total_steps):
         basic_timestep(world, learner, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
-                       animation=animation)
+                       animation=animation, teleport=teleport)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
         targets_over_time[i] = [learner.V[t] for t in all_targets]
         
@@ -297,6 +309,11 @@ def main(
                 "curiosity value in the TD update."),
         reward_bonus: bool = typer.Option(False, 
             help="Set to True to add a bonus to the reward."),
+        cylinder: bool = typer.Option(False, 
+            help="Connect the top and bottom of the gridworld and don't" +
+                " allow downward actions."),
+        teleport: bool = typer.Option(True,
+            help="If True, the agent teleports whenever its curiosity ceases."),
         animation: bool = typer.Option(True, 
             help="If True, save plots of the value function with " + 
                 "agent position at each timestep and output video animation."),
@@ -336,7 +353,8 @@ def main(
         aversive=aversive, ceases=ceases, 
         positive=positive, decays=decays,
         flip_update=flip_update,
-        reward_bonus=reward_bonus
+        reward_bonus=reward_bonus,
+        cylinder=cylinder, teleport=teleport
     )
 
 if __name__ == "__main__":
