@@ -2,7 +2,7 @@ from agents import CuriousTDLearner, GridworldTDLearner
 from environments import SimpleGridWorld, CylinderGridWorld
 from visualization import (
     plot_heatmap, plot_final_heatmap, plot_interim_heatmap,
-    plot_lineplot, plot_lineplot_data)
+    plot_lineplot, plot_lineplot_data, plot_both_value_heatmaps)
 import typer
 from enum import Enum
 import numpy as np
@@ -42,14 +42,22 @@ def basic_timestep(
                 )
         else:
             vmax = steps//500 if steps > 500 else steps/500
-            plot_interim_heatmap(
-                learner.V, stepnum, 
+            # plot_interim_heatmap(
+            #     learner.V, stepnum, 
+            #     target=learner.target, 
+            #     spawn=learner.curiosity_inducing_state, 
+            #     start=world.start_pos, 
+            #     agent=world.pos, 
+            #     vmin=-vmax, vmax=vmax, 
+            #     title="Value", 
+            #     cmap="bwr_r", savepostfix=savepostfix
+            #     )
+            plot_both_value_heatmaps(learner.V, learner.vcurious, stepnum, 
+                title=["Learned Value Function", "Curiosity Value Function"],
                 target=learner.target, 
                 spawn=learner.curiosity_inducing_state, 
-                start=world.start_pos, 
-                agent=world.pos, 
-                vmin=-vmax, vmax=vmax, 
-                title="Value", 
+                start=world.start_pos, agent=world.pos, 
+                vmin=-vmax, vmax=vmax,
                 cmap="bwr_r", savepostfix=savepostfix
                 )
 
@@ -236,7 +244,7 @@ def batch_run_experiment(
             savepostfix=postfix)
 
     if animation:
-        os.system("ffmpeg -hide_banner -loglevel error -i ./output/Value_" 
+        os.system("ffmpeg -hide_banner -loglevel error -i ./output/Learned_Value_FunctionCuriosity_Value_Function_"
                   + anim_postfix + "/%d.png ./output/" + anim_postfix + ".avi")
 
 
@@ -309,10 +317,10 @@ def main(
                 "curiosity value in the TD update."),
         reward_bonus: bool = typer.Option(False, 
             help="Set to True to add a bonus to the reward."),
-        cylinder: bool = typer.Option(False, 
+        cylinder: bool = typer.Option(True, 
             help="Connect the top and bottom of the gridworld and don't" +
                 " allow downward actions."),
-        teleport: bool = typer.Option(True,
+        teleport: bool = typer.Option(False,
             help="If True, the agent teleports whenever its curiosity ceases."),
         animation: bool = typer.Option(True, 
             help="If True, save plots of the value function with " + 

@@ -92,6 +92,10 @@ class CylinderGridWorld(SimpleGridWorld):
 
         super().__init__(side_lengths)
 
+        self.start_pos = (side_lengths[0]-1, side_lengths[1]//2)
+
+        self.pos = self.start_pos
+
         #No actions can go down in cylinder world!
         self.actions = tuple(a for a in product((-1,0),(-1,0,1)) if a!=(0,0))
 
@@ -104,11 +108,11 @@ class CylinderGridWorld(SimpleGridWorld):
 
         new_col = min(max(state[1]+action[1],0), self.dimensions[1]-1)
         
-        new_row = state[0]+action[0]
-        if new_row == -1:         #Fall off the bottom to get to the top
-            new_row = self.dimensions[0]-1
+        new_row = state[0] + action[0]
+        if new_row == -1:         #Fall off the top to get to the start pos
+            return self.start_pos
         elif new_row == self.dimensions[0]:
-            new_row = 0           #Or fall off the top to get to the bottom
+            new_row = 0           #Or fall off the bottom to get to the top
 
         return (new_row, new_col)
 

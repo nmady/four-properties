@@ -6,7 +6,7 @@ import csv
 import typer
 import os
 
-def plot_bars(steps, width, height, figsize, filepath):
+def plot_bars(steps, width, height, figsize, filepath, y_logscale=False):
 
     csv_dict = {}
     length_dict = {}
@@ -62,6 +62,9 @@ def plot_bars(steps, width, height, figsize, filepath):
                     xytext = (0, 9), 
                     textcoords = 'offset points')
     plt.xticks(rotation=45, ha='right')
+    if y_logscale:
+        plt.yscale('log')
+    ax.set_ylabel("Count of visits to targets")
     fig.tight_layout()
     plt.savefig("output/barplot"+str(width) + "_" + str(height) + "_" + str(steps) +".png")
     plt.close()
@@ -76,7 +79,9 @@ def main(
         figheight: float = typer.Option(None, 
             help="Height of heatmap figure in inches"),
         filepath: str = typer.Option("./output/num_target_visits.csv",
-            help="Path to the csv to build the barplot from.")
+            help="Path to the csv to build the barplot from."),
+        y_logscale: bool = typer.Option(False,
+            help="Scale the y-axis on a log scale.")
         ):
     """
     Let's make a nice barplot from the csv file.
@@ -94,7 +99,7 @@ def main(
 
     assert os.path.exists(filepath)
 
-    plot_bars(steps, width, height, figsize, filepath)
+    plot_bars(steps, width, height, figsize, filepath, y_logscale=y_logscale)
 
 
 
