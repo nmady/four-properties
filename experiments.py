@@ -223,11 +223,6 @@ def batch_run_experiment(
         + "_steps"+str(steps))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, figsize=figsize, display="Save",savepostfix=postfix)
-    
-    postfix = ("normStackedMean_" + str(dimensions[0]) + "_" + str(dimensions[1])
-        + "_steps"+str(steps))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//(maxlen*50)), vmax=steps//(maxlen*50), figsize=figsize, display="Save",savepostfix=postfix)
 
     postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
     postfix += ablation_postfix
