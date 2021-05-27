@@ -13,7 +13,7 @@ def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,s
     fig = plt.figure(figsize=figsize,dpi=200, tight_layout=True)
   else:
     fig = plt.figure(dpi=200)
-  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True, center=0)
+  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True)
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
     ax.add_patch(rect)
