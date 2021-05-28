@@ -6,7 +6,8 @@ import csv
 import typer
 import os
 
-def plot_bars(steps, width, height, figsize, filepath, y_logscale=False):
+def plot_bars(steps, width, height, 
+        figsize, filepath, outfilepath, y_logscale=False):
 
     csv_dict = {}
     length_dict = {}
@@ -38,15 +39,11 @@ def plot_bars(steps, width, height, figsize, filepath, y_logscale=False):
     #We have to pad the lists if they are of different lengths for pandas
     for val in csv_dict.values():
         val += [np.nan] * (longest - len(val))
-    
-    for key, val in csv_dict.items():
-        print(key + "(" + str(length_dict[key]) + "):", val)
 
 
     df = pd.DataFrame(csv_dict)
     df = df.astype(float)
 
-    print(df.head())
 
     fig, ax = plt.subplots()
     if figsize is not None:
@@ -66,7 +63,7 @@ def plot_bars(steps, width, height, figsize, filepath, y_logscale=False):
         plt.yscale('log')
     ax.set_ylabel("Count of visits to targets")
     fig.tight_layout()
-    plt.savefig("output/barplot"+str(width) + "_" + str(height) + "_" + str(steps) +".png")
+    plt.savefig(outfilepath)
     plt.close()
 
 
@@ -78,10 +75,12 @@ def main(
             help="Width of heatmap figures in inches"),
         figheight: float = typer.Option(None, 
             help="Height of heatmap figure in inches"),
-        filepath: str = typer.Option("./output/num_target_visits.csv",
+        inpath: str = typer.Option("./output/num_target_visits.csv",
             help="Path to the csv to build the barplot from."),
         y_logscale: bool = typer.Option(False,
-            help="Scale the y-axis on a log scale.")
+            help="Scale the y-axis on a log scale."),
+        outpath: str = typer.Option(None,
+            help="Output will be saved as a file to this path."),
         ):
     """
     Let's make a nice barplot from the csv file.
@@ -97,10 +96,13 @@ def main(
     else:
         figsize = (figwidth, figheight)
 
-    assert os.path.exists(filepath)
+    assert os.path.exists(inpath)
 
-    plot_bars(steps, width, height, figsize, filepath, y_logscale=y_logscale)
+    if outpath is None:
+        outpath = "./output/barplot"+str(width) + "_" + str(height) + "_" + str(steps) +".png"
 
+    plot_bars(steps, width, height, figsize, 
+        inpath, outpath, y_logscale=y_logscale)
 
 
 if __name__ == "__main__":
