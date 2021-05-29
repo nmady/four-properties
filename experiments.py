@@ -10,9 +10,11 @@ import pandas as pd
 import os
 import signal
 
+num_target_visits_path = "./output/num_target_visits.csv"
+
 def keyboardInterruptHandler(signal, frame):
     print("KeyboardInterrupt (ID: {}) has been caught. Cleaning up...".format(signal))
-    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+    with open(num_target_visits_path, "a") as num_target_visits_f:
         num_target_visits_f.write(",Aborted!\n")
     exit(0)
 
@@ -130,9 +132,9 @@ def batch_run_experiment(
                   + "_steps" + str(steps))
     ablation_postfix = get_ablation_postfix(**kwargs)
 
-    if not os.path.exists("./output/num_target_visits.csv"):
-        os.system("touch ./output/num_target_visits.csv")
-    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+    if not os.path.exists(num_target_visits_path):
+        os.system("touch " + num_target_visits_path)
+    with open(num_target_visits_path, "a") as num_target_visits_f:
         num_target_visits_f.write(setup_info + ablation_postfix + ",")
 
     rng = np.random.default_rng(2021)
@@ -151,7 +153,7 @@ def batch_run_experiment(
             **kwargs
             )
 
-        with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+        with open(num_target_visits_path, "a") as num_target_visits_f:
             num_target_visits_f.write(str(learner.num_target_visits) + ",")
         
         plot_final_heatmap(
@@ -213,7 +215,7 @@ def batch_run_experiment(
                 display="Save",
                 savepostfix=postfix)
 
-    with open("./output/num_target_visits.csv", "a") as num_target_visits_f:
+    with open(num_target_visits_path, "a") as num_target_visits_f:
         num_target_visits_f.write("\n")
 
     # Compute max edge length for normalization
