@@ -8,21 +8,22 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import os
-# import signal
 
-# num_target_visits_path = "./output/num_target_visits.csv"
-
-# def keyboardInterruptHandler(signal, frame):
-#     print("KeyboardInterrupt (ID: {}) has been caught. Cleaning up...".format(signal))
-#     with open(num_target_visits_path, "a") as num_target_visits_f:
-#         num_target_visits_f.write(",Aborted!\n")
-#     exit(0)
-
+def get_curiosity_vmax(learner, gamma):
+    max = 0
+    for target in learner.get_all_possible_targets():
+        rcurious = learner.get_new_rcurious(target)
+        interim_max = np.max(np.abs(learner.model.value_iteration(rcurious, 
+                                                        gamma=gamma)))
+        if interim_max > max:
+            max = interim_max
+    return max
 
 
 def basic_timestep(
         world, 
         learner, 
+        gamma,
         stepnum=None, 
         steps=None, 
         savepostfix="",
@@ -66,7 +67,7 @@ def basic_timestep(
     action = learner.get_action(world.pos, epsilon=0.2)
     world.next_pos = world.get_next_state(world.pos, action)
     reward = world.get_reward()
-    learner.update(world.pos, world.next_pos, reward, gamma=0.9)
+    learner.update(world.pos, world.next_pos, reward, gamma=gamma)
     if learner.is_target(world.next_pos) and teleport:
         world.visit(world.next_pos)
         world.next_pos = world.start_pos
@@ -120,6 +121,8 @@ def batch_run_experiment(
         lineplot=True,
         **kwargs):
     
+    gamma = 0.9
+
     # These "_stacked" variables will hold data for plotting aggregate data over
     # the batch of experiments. The first two are for heatmaps, which the second
     # two are for lineplots.
@@ -147,6 +150,7 @@ def batch_run_experiment(
         anim_postfix = str(postfix)
 
         learner, world, inducer_over_time, targets_over_time = basic_experiment(
+            gamma,
             steps, dimensions, 
             rng=rng, learner_type=learner_type, 
             savepostfix=anim_postfix, 
@@ -258,6 +262,7 @@ def batch_run_experiment(
 
 
 def basic_experiment(
+        gamma,
         steps=1000, 
         dimensions = (11,11), 
         rng=None, learner_type=CuriousTDLearner, 
@@ -282,7 +287,7 @@ def basic_experiment(
     print("Start pos:", world.start_pos)
         
     for i in range(total_steps):
-        basic_timestep(world, learner, stepnum=i, 
+        basic_timestep(world, learner, gamma, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
                        animation=animation, teleport=teleport)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]

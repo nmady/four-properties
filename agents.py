@@ -146,6 +146,9 @@ class CuriousTDLearner(GridworldTDLearner):
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
         self.target_row = target_row
+        self.target_col_endpoints = (1, side_lengths[1]-1) 
+            # Targets are not allowed to be right next to the wall, hence are 
+            # between 1 (inclusive) and width-1 (exclusive).
         self.model = model_class(side_lengths)
 
         self.num_target_visits = 0      #updated in is_target() method
@@ -187,7 +190,7 @@ class CuriousTDLearner(GridworldTDLearner):
             self.delta = effective_reward + gamma*self.V[next_state] - self.V[state]
         self.V[state] += self.alpha*self.delta
 
-        if self.is_curiosity_inducing(next_state):
+        if self.is_curiosity_inducing(next_state, gamma):
             pass
 
 
@@ -225,7 +228,7 @@ class CuriousTDLearner(GridworldTDLearner):
         return chosen_action
 
 
-    def is_curiosity_inducing(self, state):
+    def is_curiosity_inducing(self, state, gamma):
         """ If state induces curiosity, sets up curiosity target, reward, value
 
         Note that the curiosity_inducing_state only induces curiosity when the 
@@ -239,32 +242,41 @@ class CuriousTDLearner(GridworldTDLearner):
         """
         if state == self.curiosity_inducing_state and self.target == None:
 
-            # Targets are not allowed to be right next to the wall!
-            new_target_col = self.rng.integers(low=1,high=self.side_lengths[1]-1)
-            
-            self.target = (self.target_row, new_target_col)
+            self.target = self.get_new_target()
             self.target_is_new = True
 
-            self.rcurious = np.full(self.side_lengths, -1)
-            self.rcurious[self.target] = 0
-
-            # Ablation study: removing aversive quality
-            if not self.aversive:
-                self.rcurious = np.zeros(self.side_lengths)
-
-                # Testing to see how different things are when experience is of 
-                # a positive reward upon satisfying curiosity.
-                if self.positive:
-                    self.rcurious[self.target] = 1
+            self.rcurious = self.get_new_rcurious(self.target)
 
             self.vcurious = self.model.value_iteration(self.rcurious, 
-                                                        gamma=0.9)
+                                                        gamma=gamma)
             return True
         return False
 
+    def get_new_target(self):
+        new_target_col = self.rng.integers(low=self.target_col_endpoints[0],
+            high=self.target_col_endpoints[1])
+        
+        return (self.target_row, new_target_col)
+
+    def get_new_rcurious(self, target):
+        rcurious = np.full(self.side_lengths, -1)
+        rcurious[target] = 0
+
+        # Ablation study: removing aversive quality
+        if not self.aversive:
+            rcurious = np.zeros(self.side_lengths)
+
+            # Testing to see how different things are when experience is of 
+            # a positive reward upon satisfying curiosity.
+            if self.positive:
+                rcurious[target] = 1
+
+        return rcurious
+
 
     def get_all_possible_targets(self):
-        return [(self.target_row, col) for col in range(1,self.side_lengths[1]-1)]
+        return [(self.target_row, col) for col in range(
+            self.target_col_endpoints[0], self.target_col_endpoints[1])]
 
 
     def is_target(self, state):
