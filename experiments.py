@@ -8,17 +8,17 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import os
-import signal
+# import signal
 
-num_target_visits_path = "./output/num_target_visits.csv"
+# num_target_visits_path = "./output/num_target_visits.csv"
 
-def keyboardInterruptHandler(signal, frame):
-    print("KeyboardInterrupt (ID: {}) has been caught. Cleaning up...".format(signal))
-    with open(num_target_visits_path, "a") as num_target_visits_f:
-        num_target_visits_f.write(",Aborted!\n")
-    exit(0)
+# def keyboardInterruptHandler(signal, frame):
+#     print("KeyboardInterrupt (ID: {}) has been caught. Cleaning up...".format(signal))
+#     with open(num_target_visits_path, "a") as num_target_visits_f:
+#         num_target_visits_f.write(",Aborted!\n")
+#     exit(0)
 
-signal.signal(signal.SIGINT, keyboardInterruptHandler)
+
 
 def basic_timestep(
         world, 
@@ -100,16 +100,17 @@ def get_ablation_postfix(**kwargs):
             if value:
                 postfix += "_yes_reward_bonus"
         elif key == "cylinder":
-            if value:
-                postfix += "_yes_cylinder"
-        elif key == "teleport":
             if not value:
-                postfix += "_no_teleport"
+                postfix += "_no_cylinder"
+        elif key == "teleport":
+            if value:
+                postfix += "_yes_teleport"
         else:
             raise ValueError("Key " + key + " is not recognized.")
     return postfix
 
 def batch_run_experiment(
+        num_target_visits_path,
         trials=1,
         steps=1000, 
         dimensions = (11,11), 
@@ -304,6 +305,8 @@ def main(
             help="Width of heatmap figures in inches"),
         figheight: float = typer.Option(None, 
             help="Height of heatmap figure in inches"),
+        csv_output: str = typer.Option("./output/num_target_visits.csv",
+            help="File name to append the count of number of target visits."),
         learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
             help="Type of learner to experiment with"),
         directed: bool = typer.Option(True, 
@@ -359,19 +362,28 @@ def main(
     else:
         figsize = (figwidth, figheight)
 
-    batch_run_experiment(
-        trials=trials, steps=steps,
-        dimensions=(height, width), 
-        figsize=figsize,
-        learner_type=l_type,
-        animation=animation, lineplot=lineplot,
-        directed=directed, voluntary=voluntary,
-        aversive=aversive, ceases=ceases, 
-        positive=positive, decays=decays,
-        flip_update=flip_update,
-        reward_bonus=reward_bonus,
-        cylinder=cylinder, teleport=teleport
-    )
+    try:
+        batch_run_experiment(
+            csv_output,
+            trials=trials, steps=steps,
+            dimensions=(height, width), 
+            figsize=figsize,
+            learner_type=l_type,
+            animation=animation, lineplot=lineplot,
+            directed=directed, voluntary=voluntary,
+            aversive=aversive, ceases=ceases, 
+            positive=positive, decays=decays,
+            flip_update=flip_update,
+            reward_bonus=reward_bonus,
+            cylinder=cylinder, teleport=teleport
+    )   
+    except KeyboardInterrupt as e:
+        print("KeyboardInterrupt has been caught. Cleaning up...")
+        with open(csv_output, "a") as num_target_visits_f:
+            num_target_visits_f.write(",Aborted!\n")
+        raise e
+
+    
 
 if __name__ == "__main__":
     typer.run(main)
