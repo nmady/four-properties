@@ -102,7 +102,7 @@ class CuriousTDLearner(GridworldTDLearner):
         See GridworldTDLearner for base class attributes.
         curiosity_inducing_state (tuple): This is the permanent, hard-coded  home of the 
             "bookstore", saved as the coordinates (row, col) that consistently 
-            induce curiosity in the agent.
+            induces curiosity in the agent upon its visit.
         target (None or tuple): If curiosity has been induced in the agent, then
             a target is generated, represented as the coordinates (row, col) 
             that the agent will direct its behaviour towards as long as it
@@ -188,6 +188,7 @@ class CuriousTDLearner(GridworldTDLearner):
 
         if not self.voluntary:
             self.delta = effective_reward + gamma*self.V[next_state] - self.V[state]
+        
         self.V[state] += self.alpha*self.delta
 
         if self.is_curiosity_inducing(next_state, gamma):
@@ -310,9 +311,11 @@ class CuriousTDLearner(GridworldTDLearner):
             if self.decays:
 
                 # check to see if rcurious is basically zero.
-                if np.any(np.absolute(self.rcurious) < eps):
+                if np.all(np.absolute(self.rcurious) < eps):
 
                     self.target = None
+
+                    return True
 
                 self.rcurious = self.rcurious * decay_rate
                 self.vcurious = self.model.value_iteration(self.rcurious, 
