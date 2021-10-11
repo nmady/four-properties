@@ -258,7 +258,7 @@ def batch_run_experiment(
 
     if animation:
         os.system("ffmpeg -hide_banner -loglevel error -i ./output/Learned_Value_FunctionCuriosity_Value_Function_"
-                  + anim_postfix + "/%d.png ./output/" + anim_postfix + ".avi")
+                  + anim_postfix + "/%d.png -vcodec ffv1 ./output/" + anim_postfix + ".avi")
 
 
 def basic_experiment(
