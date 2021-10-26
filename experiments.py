@@ -227,23 +227,32 @@ def batch_run_experiment(
     maxlen = max(dimensions)
 
     postfix = ("stackedMean_" + str(dimensions[0]) + "_" + str(dimensions[1])
-        + "_steps"+str(steps))
+        + "_steps" + str(steps)
+        + "_trials" + str(trials))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, figsize=figsize, display="Save",savepostfix=postfix)
 
-    postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix=("stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])
+        + "_steps" + str(steps)
+        + "_trials" + str(trials))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",figsize=figsize, display="Save",savepostfix=postfix)
 
-    postfix="stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix=("stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])
+        + "_steps" + str(steps)
+        + "_trials" + str(trials))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state, start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//10, agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
     
-    postfix="normStackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix=("normStackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])
+        + "_steps" + str(steps)
+        + "_trials" + str(trials))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state, start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//maxlen, agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
     
-    postfix="stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
+    postfix=("stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])
+        + "_steps" + str(steps)
+        + "_trials" + str(trials))
     postfix += ablation_postfix
     plot_final_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
 
