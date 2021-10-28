@@ -188,7 +188,7 @@ def batch_run_experiment(
                 {"Value":inducer_over_time, "Time":range(steps)}
                 )
             df_inducer["Trial"] = n
-            df_inducer["Type"] = "Curiosity-inducing State"
+            df_inducer["Type"] = "Curiosity-inducing location"
             df_target_frame = []
             for target_num, vector in enumerate(targets_over_time.transpose()):
                 df_target_temp = pd.DataFrame({"Value":vector, "Time":range(steps)})
@@ -215,7 +215,7 @@ def batch_run_experiment(
         
         if lineplot:
             plot_lineplot(range(steps), inducer_over_time, 
-                title="Value of Curosity-inducing State", 
+                title="Value of Curosity-inducing location", 
                 xlabel="Time", ylabel="Value", 
                 display="Save",
                 savepostfix=postfix)
