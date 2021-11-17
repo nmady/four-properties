@@ -4,8 +4,16 @@ import matplotlib.patches as patches
 import matplotlib.colors as colors
 import seaborn as sns
 import os
+import sys
 
-def plot_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
+plt.rcParams["font.family"] = "Times New Roman"
+
+def plot_heatmap(data,
+  cmap="afmhot",
+  title=None,
+  vmin=None, vmax=None,
+  target=None, spawn=None, start=None, agent=None, 
+  figsize=None, display="Show", savepostfix=""):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
 
@@ -77,6 +85,14 @@ def plot_both_value_heatmaps(data1, data2, stepnum, cmap="bwr_r",
 
   ax1.text(9, 0, "t="+str(stepnum))
 
+  # debugging code to create a nice file of value function printouts
+  with open('output/' + savepostfix.replace(" ", "_") + '.txt', 'a') as f:
+    print("t="+str(stepnum), file=f)
+    np.set_printoptions(floatmode='maxprec_equal', 
+      linewidth=100000, 
+      threshold=sys.maxsize)
+    print(data1, file=f)
+
   if title is None:
     title = ""
   else: 
@@ -115,6 +131,7 @@ def plot_heatmap_to_ax(data, ax=None, cmap="afmhot", cbar_ax=True, vmin=None,vma
   if agent != None:
     rect = patches.Rectangle((agent[1]+0.3,agent[0]+0.3),0.4,0.4,linewidth=1,edgecolor='#333333',facecolor='#999999')  
     ax.add_patch(rect)
+
   return ax
     
 
