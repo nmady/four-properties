@@ -3,11 +3,14 @@ from environments import SimpleGridWorld, CylinderGridWorld
 from visualization import (
     plot_heatmap, plot_final_heatmap, plot_interim_heatmap,
     plot_lineplot, plot_lineplot_data, plot_both_value_heatmaps)
+import sys
 import typer
 from enum import Enum
 import numpy as np
 import pandas as pd
 import os
+
+scaling_constant=1.5
 
 def get_curiosity_vmax(learner, gamma):
     max = 0
@@ -28,6 +31,7 @@ def basic_timestep(
         steps=None, 
         savepostfix="",
         animation=False,
+        figure2=False,
         teleport=True):
     if (type(stepnum) is int and stepnum%100==0):
         print(".", end="", flush=True)
@@ -65,9 +69,83 @@ def basic_timestep(
                 )
 
     action = learner.get_action(world.pos, epsilon=0.2)
+    
+    # debugging code to create a nice file of value function printouts
+    with open('output/' + savepostfix.replace(" ", "_") + '.txt', 'a') as f:
+        print("t="+str(stepnum), action, file=f)
+        np.set_printoptions(floatmode='maxprec_equal', 
+            linewidth=100000, 
+            threshold=sys.maxsize)
+        print(learner.V, file=f)
+
     world.next_pos = world.get_next_state(world.pos, action)
     reward = world.get_reward()
     learner.update(world.pos, world.next_pos, reward, gamma=gamma)
+    if world.next_pos == learner.curiosity_inducing_state and figure2:
+        plot_final_heatmap(learner.vcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=-10, vmax=10,
+            yticklabels=False,
+            cmap="bwr_r", 
+            savepostfix="figure2b_Vcurious"+str(stepnum), 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(learner.V,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=-0.035, vmax=0.035,
+            yticklabels=False,
+            cmap="bwr_r", savepostfix="figure2b_V"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+        plot_final_heatmap(world.visit_array,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=None, vmax=None,
+            yticklabels=False,
+            cmap="bone", savepostfix="figure2b_visits"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+    if learner.is_target(world.next_pos) and figure2:
+        plot_final_heatmap(learner.vcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=-10, vmax=10,
+            yticklabels=False,
+            cmap="bwr_r", savepostfix="figure2c_Vcurious"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+        plot_final_heatmap(learner.V,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=-0.035, vmax=0.035,
+            yticklabels=False,
+            cmap="bwr_r", savepostfix="figure2c_V"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+        plot_final_heatmap(world.visit_array,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.next_pos,
+            linewidths=0.1,
+            linecolor='#EEEEEE',
+            vmin=None, vmax=None,
+            yticklabels=False,
+            cmap="bone", savepostfix="figure2c_visits"+str(stepnum), scaling_constant=scaling_constant, display="Save")
     if learner.is_target(world.next_pos) and teleport:
         world.visit(world.next_pos)
         world.next_pos = world.start_pos
@@ -119,6 +197,7 @@ def batch_run_experiment(
         learner_type=CuriousTDLearner, 
         animation=False,
         lineplot=True,
+        figure2=False,
         **kwargs):
     
     gamma = 0.9
@@ -155,6 +234,7 @@ def batch_run_experiment(
             rng=rng, learner_type=learner_type, 
             savepostfix=anim_postfix, 
             animation=animation,
+            figure2=figure2,
             **kwargs
             )
 
@@ -277,6 +357,7 @@ def basic_experiment(
         rng=None, learner_type=CuriousTDLearner, 
         savepostfix="",
         animation=False,
+        figure2=False,
         **kwargs):
     gridworld_dimensions = dimensions
     total_steps = steps
@@ -285,7 +366,8 @@ def basic_experiment(
     cylinder = kwargs.pop('cylinder')
     world_type = CylinderGridWorld if cylinder else SimpleGridWorld
 
-    world = world_type(gridworld_dimensions)
+    world = world_type(gridworld_dimensions, 
+        start_pos=(gridworld_dimensions[0]//2, gridworld_dimensions[1]//2))
 
     learner = learner_type(gridworld_dimensions, model_class=world_type, rng=rng, **kwargs)
 
@@ -298,7 +380,7 @@ def basic_experiment(
     for i in range(total_steps):
         basic_timestep(world, learner, gamma, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
-                       animation=animation, teleport=teleport)
+                       animation=animation, teleport=teleport, figure2=figure2)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
         targets_over_time[i] = [learner.V[t] for t in all_targets]
         
@@ -350,8 +432,11 @@ def main(
         animation: bool = typer.Option(True, 
             help="If True, save plots of the value function with " + 
                 "agent position at each timestep and output video animation."),
-        lineplot: bool = typer.Option(True, 
-            help="If True, output lineplots. (Slow.)")):
+        lineplot: bool = typer.Option(False, 
+            help="If True, output lineplots. (Slow.)"),
+        figure2: bool = typer.Option(False,
+            help="In True, save heatmaps when the agent visits the " + 
+                "curiosity-inducing state or target.")):
     """
     Run a batch of experiments.
     """
@@ -383,7 +468,7 @@ def main(
             dimensions=(height, width), 
             figsize=figsize,
             learner_type=l_type,
-            animation=animation, lineplot=lineplot,
+            animation=animation, lineplot=lineplot, figure2=figure2,
             directed=directed, voluntary=voluntary,
             aversive=aversive, ceases=ceases, 
             positive=positive, decays=decays,

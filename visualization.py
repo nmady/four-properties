@@ -7,21 +7,48 @@ import os
 import sys
 
 plt.rcParams["font.family"] = "Times New Roman"
+plt.rcParams["font.size"] = 10
 
 def plot_heatmap(data,
   cmap="afmhot",
   title=None,
   vmin=None, vmax=None,
   target=None, spawn=None, start=None, agent=None, 
-  figsize=None, display="Show", savepostfix=""):
+  figsize=None, 
+  linewidths=None, linecolor=None, cbar=True, 
+  xticklabels="auto", yticklabels="auto",
+  scaling_constant=2,
+  display="Show", savepostfix=""):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
 
-  if figsize is not None:
-    fig = plt.figure(figsize=figsize,dpi=200, tight_layout=True)
-  else:
-    fig = plt.figure(dpi=200)
-  ax = sns.heatmap(data,cmap=cmap,vmin=vmin,vmax=vmax,square=True)
+  dpi = 100
+  matrix_height_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[0]
+  matrix_height_in = matrix_height_pt / dpi
+
+  fig_bar, ax_bar = plt.subplots(figsize=(0.2,matrix_height_in))
+  fig, ax1 = plt.subplots(
+    figsize=(matrix_height_in, matrix_height_in),
+    gridspec_kw=dict(top=1, bottom=0))
+  
+  fig.dpi = dpi
+  # if figsize is not None:
+  #   # fig = plt.figure(figsize=figsize,dpi=200, tight_layout=True)
+  # else:
+  #   # fig = plt.figure(dpi=200)
+  ax = sns.heatmap(data,
+    ax=ax1,
+    cbar_ax=ax_bar,
+    cmap=cmap,
+    vmin=vmin,vmax=vmax,
+    square=True, linewidths=linewidths, linecolor=linecolor, cbar=cbar,
+    xticklabels=xticklabels, yticklabels=yticklabels)
+  ax.set_xticklabels(ax.get_xticklabels(), rotation=0) 
+
+  # Expand the axis slightly so that the outer grid lines aren't trimmed
+  ax.set_ylim(ymin=float(data.shape[0])+0.1, ymax=-0.1)
+  ax.set_xlim(xmin=-0.1, xmax=float(data.shape[1])+0.1)
+  
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
     ax.add_patch(rect)
@@ -29,18 +56,40 @@ def plot_heatmap(data,
     rect = patches.Rectangle((spawn[1],spawn[0]),1,1,linewidth=2,edgecolor='#666666',facecolor='none')  
     ax.add_patch(rect)
   if start != None:
-    rect = patches.Rectangle((start[1],start[0]),1,1,linewidth=2,ls="--",edgecolor='#666666',facecolor='none')  
+    rect = patches.Rectangle((start[1],start[0]),1,1,linewidth=1,ls="--",edgecolor='#666666',facecolor='none')  
     ax.add_patch(rect) 
   if agent != None:
     rect = patches.Rectangle((agent[1]+0.3,agent[0]+0.3),0.4,0.4,linewidth=1,edgecolor='#333333',facecolor='#999999')  
     ax.add_patch(rect)       
   if title:    
     plt.title(title)
-  return fig, ax
+  return fig, ax, fig_bar
 
 
-def plot_final_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
-  fig, ax = plot_heatmap(data, cmap=cmap,title=title,vmin=vmin,vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, display=display, savepostfix=savepostfix)
+def plot_final_heatmap(data,
+  cmap="afmhot",
+  title="",
+  vmin=None, vmax=None,
+  target=None,
+  spawn=None,
+  start=None, 
+  agent=None, 
+  figsize=None, 
+  linewidths=None, linecolor=None, savebar=True, 
+  xticklabels="auto", yticklabels="auto",
+  tick_location='bottom',
+  scaling_constant=2,
+  display="Show", 
+  savepostfix=""):
+  fig, ax, fig_bar = plot_heatmap(data, 
+    cmap=cmap,
+    title=title,
+    vmin=vmin,vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, 
+    figsize=figsize, 
+    linewidths=linewidths, linecolor=linecolor, 
+    xticklabels=xticklabels, yticklabels=yticklabels,
+    scaling_constant=scaling_constant,
+    display=display, savepostfix=savepostfix)
   
   if display == "Show":
     plt.show()
@@ -52,8 +101,11 @@ def plot_final_heatmap(data,cmap="afmhot",title=None,vmin=None,vmax=None,target=
 
     # Note that using the replace() method turns spaces into underscores, which
     # appears to be more LaTeX-import friendly.
-    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png")
-    plt.close()
+    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200)
+    if savebar:
+      fig_bar.savefig("output/bar"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200)
+    plt.close(fig)
+    plt.close(fig_bar)
 
 def plot_interim_heatmap(data, stepnum, cmap="afmhot", title=None, 
     vmin=None, vmax=None, target=None, spawn=None,start=None, agent=None, 
@@ -84,14 +136,6 @@ def plot_both_value_heatmaps(data1, data2, stepnum, cmap="bwr_r",
   plot_heatmap_to_ax(data2, ax=ax2, cmap=cmap, cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, savepostfix=savepostfix)
 
   ax1.text(9, 0, "t="+str(stepnum))
-
-  # debugging code to create a nice file of value function printouts
-  with open('output/' + savepostfix.replace(" ", "_") + '.txt', 'a') as f:
-    print("t="+str(stepnum), file=f)
-    np.set_printoptions(floatmode='maxprec_equal', 
-      linewidth=100000, 
-      threshold=sys.maxsize)
-    print(data1, file=f)
 
   if title is None:
     title = ""
