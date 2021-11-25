@@ -12,7 +12,7 @@ class SimpleGridWorld(object):
         self.actions (tuple of tuples): 
         """
 
-        # Start position is always in the middle, in the second from bottom row
+        # Default start position is always in the middle, in the bottom row
         self.start_pos = (side_lengths[0]-2, side_lengths[1]//2)
 
         self.pos = self.start_pos
@@ -88,29 +88,32 @@ class CylinderGridWorld(SimpleGridWorld):
     """
     """
 
-    def __init__(self, side_lengths):
+    def __init__(self, side_lengths, start_pos=None):
 
         super().__init__(side_lengths)
 
-        self.start_pos = (side_lengths[0]-1, side_lengths[1]//2)
+        self.funnel_point = (side_lengths[0]-1, side_lengths[1]//2)
 
-        self.pos = self.start_pos
+        if start_pos:
+            self.pos = start_pos
+        else:
+            self.pos = self.funnel_point
 
         #No actions can go down in cylinder world!
-        self.actions = tuple(a for a in product((-1,0),(-1,0,1)) if a!=(0,0))
+        self.actions = tuple(a for a in product((-1,0),(-1,0,1)))
 
     def get_next_state(self, state, action):
         # actions look like tuples that you add to the state to get the new position:
         #   [-1,0] is left, [1,0] is right, [0, -1] is probably up? [0,1] is probably down
         ##TODO: consider using np.clip
 
-        assert action in self.actions or action == (0,0)
+        assert action in self.actions
 
         new_col = min(max(state[1]+action[1],0), self.dimensions[1]-1)
         
         new_row = state[0] + action[0]
-        if new_row == -1:         #Fall off the top to get to the start pos
-            return self.start_pos
+        if new_row == -1:         #Fall off the top to get to the funnel point
+            return self.funnel_point
         elif new_row == self.dimensions[0]:
             new_row = 0           #Or fall off the bottom to get to the top
 
