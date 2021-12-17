@@ -8,6 +8,7 @@ import sys
 
 plt.rcParams["font.family"] = "Times New Roman"
 plt.rcParams["font.size"] = 10
+dpi = 200
 
 def plot_heatmap(data,
   cmap="afmhot",
@@ -22,32 +23,44 @@ def plot_heatmap(data,
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
 
-  dpi = 100
   matrix_height_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[0]
   matrix_height_in = matrix_height_pt / dpi
+  matrix_width_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[1]
+  matrix_width_in = matrix_width_pt / dpi
+
+  print(matrix_width_in, matrix_height_in)
 
   fig_bar, ax_bar = plt.subplots(figsize=(0.2,matrix_height_in))
   fig, ax1 = plt.subplots(
-    figsize=(matrix_height_in, matrix_height_in),
+    figsize=(matrix_width_in, matrix_height_in),
     gridspec_kw=dict(top=1, bottom=0))
   
   fig.dpi = dpi
-  # if figsize is not None:
-  #   # fig = plt.figure(figsize=figsize,dpi=200, tight_layout=True)
-  # else:
-  #   # fig = plt.figure(dpi=200)
+
   ax = sns.heatmap(data,
     ax=ax1,
     cbar_ax=ax_bar,
     cmap=cmap,
     vmin=vmin,vmax=vmax,
-    square=True, linewidths=linewidths, linecolor=linecolor, cbar=cbar,
+    square=True, 
+    linewidths=linewidths, linecolor=linecolor, 
+    cbar=cbar,
     xticklabels=xticklabels, yticklabels=yticklabels)
   ax.set_xticklabels(ax.get_xticklabels(), rotation=0) 
 
   # Expand the axis slightly so that the outer grid lines aren't trimmed
   ax.set_ylim(ymin=float(data.shape[0])+0.1, ymax=-0.1)
   ax.set_xlim(xmin=-0.1, xmax=float(data.shape[1])+0.1)
+
+  # Outline the heatmap
+  # ax.axhline(y=0, color='k',linewidth=1)
+  # ax.axhline(y=data.shape[0], color='k',linewidth=1)
+  # ax.axvline(x=0, color='k',linewidth=1)
+  # ax.axvline(x=data.shape[1], color='k',linewidth=1)
+  ax.hlines(y=0, color='k', xmin=0, xmax=data.shape[1], linewidth=1)
+  ax.hlines(y=data.shape[0], color='k', xmin=0, xmax=data.shape[1], linewidth=1)
+  ax.vlines(x=0, color='k', ymin=0, ymax=data.shape[0], linewidth=1)
+  ax.vlines(x=data.shape[1], color='k', ymin=0, ymax=data.shape[0], linewidth=1)
   
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
@@ -101,9 +114,9 @@ def plot_final_heatmap(data,
 
     # Note that using the replace() method turns spaces into underscores, which
     # appears to be more LaTeX-import friendly.
-    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200)
+    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200, transparent=True)
     if savebar:
-      fig_bar.savefig("output/bar"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200)
+      fig_bar.savefig("output/bar"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200, transparent=True)
     plt.close(fig)
     plt.close(fig_bar)
 
@@ -179,9 +192,8 @@ def plot_heatmap_to_ax(data, ax=None, cmap="afmhot", cbar_ax=True, vmin=None,vma
   return ax
     
 
-def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
-  plt.figure(dpi=200)
-  ax = sns.lineplot(data=data, y="Value", x="Time", hue="Type")
+def save_lineplot(ax, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
+  ax.legend(frameon=False).set_title(None)
   sns.despine(ax=ax, offset=1, trim=True)
   if title:    
     plt.title(title)
@@ -189,6 +201,7 @@ def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show
     ax.set_xlabel(xlabel)
   if ylabel:
     ax.set_ylabel(ylabel)
+  ax.figure.tight_layout()
   if display == "Show":
     plt.show()
   elif display == "Save":
@@ -202,28 +215,5 @@ def plot_lineplot_data(data, xlabel=None, ylabel=None, title=None, display="Show
     plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png")
     plt.close()
 
-def plot_lineplot(x, y, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
-  plt.figure(dpi=200)
-  ax = sns.lineplot(x=x, y=y)
-  sns.despine(ax=ax, offset=1, trim=True)
-  if title:    
-    plt.title(title)
-  if xlabel:
-    ax.set_xlabel(xlabel)
-  if ylabel:
-    ax.set_ylabel(ylabel)
-  sns.despine(ax=ax)
-  if display == "Show":
-    plt.show()
-  elif display == "Save":
-    file_path = "./output/"
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
 
-    # Note that using the replace() method turns spaces into underscores, which
-    # appears to be more LaTeX-import friendly.
-    plt.savefig("output/"+title.replace(" ", "_")
-      +"_"+savepostfix.replace(" ", "_")+".png")
-    plt.close()
 
