@@ -121,7 +121,11 @@ class CuriousTDLearner(GridworldTDLearner):
     """
 
     def __init__(
-        self, side_lengths, model_class=SimpleGridWorld, rng=None, target_row=1, 
+        self, 
+        side_lengths, 
+        curiosity_inducing_state=None,
+        gamma=None,
+        model_class=SimpleGridWorld, rng=None, target_row=1, 
         directed=True, voluntary=True, aversive=True, ceases=True, 
         positive=False, decays=False, flip_update=False, reward_bonus=False):
         """Initialize a new CuriousTDLearner
@@ -140,8 +144,13 @@ class CuriousTDLearner(GridworldTDLearner):
         self.decays = decays
         self.flip_update = flip_update
         self.reward_bonus = reward_bonus
-
-        self.curiosity_inducing_state = (side_lengths[0]-6, side_lengths[1]//2)
+        if curiosity_inducing_state is None:
+            print("curiosity_inducing_state not specified")
+            self.curiosity_inducing_state = (side_lengths[0]-6, side_lengths[1]//2)
+            # self.curiosity_inducing_state = (side_lengths[0]//2, side_lengths[1]//2)
+        else:
+            self.curiosity_inducing_state = curiosity_inducing_state
+            print("curiosity_inducing_state:", self.curiosity_inducing_state)
         self.target = None
         self.vcurious = np.zeros(side_lengths)
         self.rcurious = np.zeros(side_lengths)
@@ -191,8 +200,8 @@ class CuriousTDLearner(GridworldTDLearner):
         
         self.V[state] += self.alpha*self.delta
 
-        if self.is_curiosity_inducing(next_state, gamma):
-            pass
+        # if self.is_curiosity_inducing(next_state, gamma):
+        #     pass
 
 
     def get_action(self, state, epsilon=0):
