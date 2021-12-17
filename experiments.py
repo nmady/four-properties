@@ -2,15 +2,15 @@ from agents import CuriousTDLearner, GridworldTDLearner
 from environments import SimpleGridWorld, CylinderGridWorld
 from visualization import (
     plot_heatmap, plot_final_heatmap, plot_interim_heatmap,
-    plot_lineplot, plot_lineplot_data, plot_both_value_heatmaps)
+    save_lineplot, plot_both_value_heatmaps)
+import matplotlib.pyplot as plt
+import seaborn as sns
 import sys
 import typer
 from enum import Enum
 import numpy as np
 import pandas as pd
 import os
-
-scaling_constant=1.5
 
 def get_curiosity_vmax(learner, gamma):
     max = 0
@@ -32,10 +32,13 @@ def basic_timestep(
         savepostfix="",
         animation=False,
         figure2=False,
+        scaling_constant=3,
         teleport=True):
     if (type(stepnum) is int and stepnum%100==0):
         print(".", end="", flush=True)
     world.visit(world.pos)
+
+    learner.is_curiosity_inducing(world.pos, gamma)
 
     if animation:
         if steps is None:
@@ -77,78 +80,227 @@ def basic_timestep(
             linewidth=100000, 
             threshold=sys.maxsize)
         print(learner.V, file=f)
+        print(learner.vcurious, file=f)
 
-    world.next_pos = world.get_next_state(world.pos, action)
-    reward = world.get_reward()
-    learner.update(world.pos, world.next_pos, reward, gamma=gamma)
-    if world.next_pos == learner.curiosity_inducing_state and figure2:
+    if world.pos == learner.curiosity_inducing_state and figure2:
+        plot_final_heatmap(learner.rcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-10, vmax=10,
+            cmap="bwr_r", 
+            xticklabels=False,
+            savepostfix="figure2a_Rcurious"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(learner.rcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-10, vmax=10,
+            cmap="bwr_r", 
+            xticklabels=False,
+            yticklabels=False,
+            savepostfix="figure2d_Rcurious"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
         plot_final_heatmap(learner.vcurious,
             target=learner.target,
             spawn=learner.curiosity_inducing_state,
             start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
             vmin=-10, vmax=10,
-            yticklabels=False,
             cmap="bwr_r", 
-            savepostfix="figure2b_Vcurious"+str(stepnum), 
+            xticklabels=False,
+            savepostfix="figure2a_Vcurious"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(learner.vcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-10, vmax=10,
+            cmap="bwr_r", 
+            xticklabels=False,
+            yticklabels=False,
+            savepostfix="figure2d_Vcurious"+str(stepnum)+savepostfix, 
             scaling_constant=scaling_constant, 
             display="Save")
         plot_final_heatmap(learner.V,
             target=learner.target,
             spawn=learner.curiosity_inducing_state,
             start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
             vmin=-0.035, vmax=0.035,
-            yticklabels=False,
-            cmap="bwr_r", savepostfix="figure2b_V"+str(stepnum), scaling_constant=scaling_constant, display="Save")
-        plot_final_heatmap(world.visit_array,
-            target=learner.target,
-            spawn=learner.curiosity_inducing_state,
-            start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
-            vmin=None, vmax=None,
-            yticklabels=False,
-            cmap="bone", savepostfix="figure2b_visits"+str(stepnum), scaling_constant=scaling_constant, display="Save")
-    if learner.is_target(world.next_pos) and figure2:
-        plot_final_heatmap(learner.vcurious,
-            target=learner.target,
-            spawn=learner.curiosity_inducing_state,
-            start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
-            vmin=-10, vmax=10,
-            yticklabels=False,
-            cmap="bwr_r", savepostfix="figure2c_Vcurious"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+            xticklabels=False,
+            cmap="bwr_r", savepostfix="figure2a_V"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
         plot_final_heatmap(learner.V,
             target=learner.target,
             spawn=learner.curiosity_inducing_state,
             start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
             vmin=-0.035, vmax=0.035,
             yticklabels=False,
-            cmap="bwr_r", savepostfix="figure2c_V"+str(stepnum), scaling_constant=scaling_constant, display="Save")
+            xticklabels=False,
+            cmap="bwr_r", savepostfix="figure2d_V"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
         plot_final_heatmap(world.visit_array,
             target=learner.target,
             spawn=learner.curiosity_inducing_state,
             start=world.start_pos,
-            agent=world.next_pos,
-            linewidths=0.1,
-            linecolor='#EEEEEE',
-            vmin=None, vmax=None,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=0, vmax=2,
+            cmap="bone", savepostfix="figure2a_visits"+str(stepnum)+savepostfix,
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(world.visit_array,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=0, vmax=2,
             yticklabels=False,
-            cmap="bone", savepostfix="figure2c_visits"+str(stepnum), scaling_constant=scaling_constant, display="Save")
-    if learner.is_target(world.next_pos) and teleport:
-        world.visit(world.next_pos)
-        world.next_pos = world.start_pos
+            cmap="bone", savepostfix="figure2d_visits"+str(stepnum)+savepostfix,
+            scaling_constant=scaling_constant, 
+            display="Save")
+
+    if world.pos == world.funnel_point and figure2:
+        plot_final_heatmap(learner.rcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-10, vmax=10,
+            cmap="bwr_r", 
+            yticklabels=False,
+            xticklabels=False,
+            savepostfix="figure2c_Rcurious"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(learner.vcurious,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-10, vmax=10,
+            cmap="bwr_r", 
+            yticklabels=False,
+            xticklabels=False,
+            savepostfix="figure2c_Vcurious"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(learner.V,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=-0.035, vmax=0.035,
+            yticklabels=False,
+            xticklabels=False,
+            cmap="bwr_r", savepostfix="figure2c_V"+str(stepnum)+savepostfix, 
+            scaling_constant=scaling_constant, 
+            display="Save")
+        plot_final_heatmap(world.visit_array,
+            target=learner.target,
+            spawn=learner.curiosity_inducing_state,
+            start=world.start_pos,
+            agent=world.pos,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            vmin=0, vmax=2,
+            yticklabels=False,
+            cmap="bone", savepostfix="figure2c_visits"+str(stepnum)+savepostfix,
+            scaling_constant=scaling_constant, 
+            display="Save")
+
+    world.next_pos = world.get_next_state(world.pos, action)
+    reward = world.get_reward()
+    learner.update(world.pos, world.next_pos, reward, gamma=gamma)
+    
+    if learner.is_target(world.next_pos):
+        if figure2:
+            plot_final_heatmap(learner.rcurious,
+                target=learner.target,
+                spawn=learner.curiosity_inducing_state,
+                start=world.start_pos,
+                agent=world.next_pos,
+                linewidths=0.05,
+                linecolor='#AAAAAA22',
+                vmin=-10, vmax=10,
+                yticklabels=False,
+                xticklabels=False,
+                cmap="bwr_r", 
+                savepostfix="figure2b_Rcurious"+str(stepnum)+savepostfix, 
+                scaling_constant=scaling_constant, display="Save")
+            plot_final_heatmap(learner.vcurious,
+                target=learner.target,
+                spawn=learner.curiosity_inducing_state,
+                start=world.start_pos,
+                agent=world.next_pos,
+                linewidths=0.05,
+                linecolor='#AAAAAA22',
+                vmin=-10, vmax=10,
+                yticklabels=False,
+                xticklabels=False,
+                cmap="bwr_r", 
+                savepostfix="figure2b_Vcurious"+str(stepnum)+savepostfix, 
+                scaling_constant=scaling_constant, display="Save")
+            plot_final_heatmap(learner.V,
+                target=learner.target,
+                spawn=learner.curiosity_inducing_state,
+                start=world.start_pos,
+                agent=world.next_pos,
+                linewidths=0.05,
+                linecolor='#AAAAAA22',
+                vmin=-0.035, vmax=0.035,
+                yticklabels=False,
+                xticklabels=False,
+                cmap="bwr_r", savepostfix="figure2b_V"+str(stepnum)+savepostfix, 
+                scaling_constant=scaling_constant, display="Save")
+            temp_visits = world.visit_array
+            temp_visits[world.next_pos] += 1
+            plot_final_heatmap(temp_visits,
+                target=learner.target,
+                spawn=learner.curiosity_inducing_state,
+                start=world.start_pos,
+                agent=world.next_pos,
+                linewidths=0.05,
+                linecolor='#AAAAAA22',
+                vmin=0, vmax=2,
+                yticklabels=False,
+                cmap="bone", savepostfix="figure2b_visits"+str(stepnum)+savepostfix, 
+                scaling_constant=scaling_constant, display="Save")
+        if teleport:
+            world.visit(world.next_pos)
+            world.next_pos = world.start_pos
     world.pos = world.next_pos
 
 def get_ablation_postfix(**kwargs):
@@ -193,7 +345,8 @@ def batch_run_experiment(
         trials=1,
         steps=1000, 
         dimensions = (11,11), 
-        figsize=None,
+        curiosity_inducing_state = (5,5),
+        scaling_constant=3,
         learner_type=CuriousTDLearner, 
         animation=False,
         lineplot=True,
@@ -212,7 +365,9 @@ def batch_run_experiment(
     value_df = pd.DataFrame({"trial":[], "value":[], "type":[]})
 
     setup_info = (str(dimensions[0]) + "_" + str(dimensions[1]) 
-                  + "_steps" + str(steps))
+                  + "_steps" + str(steps)
+                  + "_bookstore" + str(curiosity_inducing_state[0]) 
+                  + "_" + str(curiosity_inducing_state[1]))
     ablation_postfix = get_ablation_postfix(**kwargs)
 
     if not os.path.exists(num_target_visits_path):
@@ -230,11 +385,13 @@ def batch_run_experiment(
 
         learner, world, inducer_over_time, targets_over_time = basic_experiment(
             gamma,
-            steps, dimensions, 
+            steps, dimensions,
+            curiosity_inducing_state=curiosity_inducing_state,
             rng=rng, learner_type=learner_type, 
             savepostfix=anim_postfix, 
             animation=animation,
             figure2=figure2,
+            scaling_constant=scaling_constant,
             **kwargs
             )
 
@@ -246,11 +403,17 @@ def batch_run_experiment(
             target=learner.target, spawn=learner.curiosity_inducing_state, 
             start=world.start_pos, agent=world.next_pos, 
             title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, 
-            figsize=figsize, display="Save",savepostfix=postfix)
+            scaling_constant=scaling_constant,
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            display="Save",savepostfix=postfix)
         plot_final_heatmap(
             world.visit_array, 
-            title="Visits", cmap="bone", vmin=0, vmax=steps//10, 
-            figsize=figsize, display="Save",savepostfix=postfix)
+            title="Visits", cmap="bone", vmin=0, vmax=steps//10,
+            scaling_constant=scaling_constant, 
+            linewidths=0.05,
+            linecolor='#AAAAAA22',
+            display="Save",savepostfix=postfix)
         
         if value_stacked is None:
             value_stacked = [learner.V]
@@ -269,6 +432,7 @@ def batch_run_experiment(
                 )
             df_inducer["Trial"] = n
             df_inducer["Type"] = "Curiosity-inducing location"
+            df_inducer["Target"] = -1
             df_target_frame = []
             for target_num, vector in enumerate(targets_over_time.transpose()):
                 df_target_temp = pd.DataFrame({"Value":vector, "Time":range(steps)})
@@ -294,11 +458,12 @@ def batch_run_experiment(
             "Max over targets:", targets_over_time.max())
         
         if lineplot:
-            plot_lineplot(range(steps), inducer_over_time, 
+            ax = sns.lineplot(x=range(steps), y=inducer_over_time)
+            save_lineplot(ax, 
                 title="Value of Curosity-inducing location", 
                 xlabel="Time", ylabel="Value", 
                 display="Save",
-                savepostfix=postfix)
+                savepostfix=postfix + "lineplot")
 
     with open(num_target_visits_path, "a") as num_target_visits_f:
         num_target_visits_f.write("\n")
@@ -306,44 +471,108 @@ def batch_run_experiment(
     # Compute max edge length for normalization
     maxlen = max(dimensions)
 
-    postfix = ("stackedMean_" + str(dimensions[0]) + "_" + str(dimensions[1])
-        + "_steps" + str(steps)
-        + "_trials" + str(trials))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(value_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, figsize=figsize, display="Save",savepostfix=postfix)
 
-    postfix=("stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])
-        + "_steps" + str(steps)
-        + "_trials" + str(trials))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(value_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos, agent=None, title="Value", cmap="viridis",figsize=figsize, display="Save",savepostfix=postfix)
+    plot_final_heatmap((np.array(value_stacked)).mean(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state,
+        start=world.start_pos, 
+        agent=None, 
+        title="Value", 
+        cmap="bwr_r", 
+        vmin=-(steps//500), vmax=steps//500,
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22', 
+        display="Save",savepostfix="stackedMean_" + postfix)
 
-    postfix=("stackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])
-        + "_steps" + str(steps)
-        + "_trials" + str(trials))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state, start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//10, agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
+    plot_final_heatmap((np.array(value_stacked)).std(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state,
+        start=world.start_pos, 
+        agent=None, 
+        title="Value", 
+        cmap="viridis",
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22',
+        display="Save",savepostfix="stackedStd_" + postfix)
+
+    plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state, 
+        start=world.start_pos,  
+        cmap="bone", 
+        vmin=0, vmax=steps//10, 
+        agent=None, 
+        title="Visits",
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22', 
+        display="Save",savepostfix="stackedMean_" + postfix)
     
-    postfix=("normStackedMean_"+str(dimensions[0])+"_"+str(dimensions[1])
-        + "_steps" + str(steps)
-        + "_trials" + str(trials))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), target=None, spawn=learner.curiosity_inducing_state, start=world.start_pos,  cmap="bone", vmin=0, vmax=steps//maxlen, agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
+    plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state, 
+        start=world.start_pos,  
+        cmap="bone", 
+        vmin=0, vmax=steps//maxlen, 
+        agent=None, title="Visits", 
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22',  
+        display="Save",savepostfix="normStackedMean_" + postfix)
+
+    plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state, 
+        start=world.start_pos,  
+        cmap="bone", 
+        agent=None, title="Visits", 
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22',  
+        display="Save",savepostfix="autoscaleStackedMean_" + postfix)
     
-    postfix=("stackedStd_"+str(dimensions[0])+"_"+str(dimensions[1])
-        + "_steps" + str(steps)
-        + "_trials" + str(trials))
-    postfix += ablation_postfix
-    plot_final_heatmap((np.array(visit_stacked)).std(axis=0), target=None, spawn=learner.curiosity_inducing_state,start=world.start_pos,  cmap="viridis", agent=None, title="Visits", figsize=figsize, display="Save",savepostfix=postfix)
+    plot_final_heatmap((np.array(visit_stacked)).std(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state,
+        start=world.start_pos,  
+        cmap="viridis", 
+        agent=None, 
+        title="Visits", 
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22',  
+        display="Save",savepostfix="stackedStd_" + postfix)
 
     if lineplot:
-        postfix="stackedLineplot_"+str(dimensions[0])+"_"+str(dimensions[1])+"_steps"+str(steps)
-        postfix += ablation_postfix
-        plot_lineplot_data(pd.concat(df_stacked, sort=False),
-            title="Value over Time", 
-            xlabel="Time", ylabel="Value", 
+        df = pd.concat(df_stacked, sort=False)
+        fig1, ax1 = plt.subplots(figsize=(6,4), dpi=200)
+        sns.lineplot(data=df, y="Value", x="Time", hue="Type", 
+            palette=sns.color_palette("colorblind")[:2], 
+            ci='sd', 
+            linewidth=1,
+            ax=ax1)
+        save_lineplot(ax1,
+            title="Learned Value vs. Time", 
+            xlabel="Time", ylabel="Learned Value", 
             display="Save",
-            savepostfix=postfix)
+            savepostfix="stackedLineplot_" + postfix)
+        df["NewIndex"] = (df["Trial"].astype('str') 
+            + df["Type"].astype('str') 
+            + df["Target"].astype('str'))
+        fig2, ax2 = plt.subplots(figsize=(6,4), dpi=200)
+        ax2 = sns.lineplot(data=df[df["Type"] == "Curiosity-inducing location"], 
+            palette=[sns.color_palette("colorblind")[0]], 
+            linewidth=0.5, y="Value", x="Time", hue="Type", units="NewIndex", estimator=None, alpha=0.36, ax=ax2)
+        sns.lineplot(data=df[df["Type"] == "Target"], 
+            palette=[sns.color_palette("colorblind")[1]], 
+            linewidth=0.5, y="Value", x="Time", hue="Type", units="NewIndex", estimator=None, alpha=0.04, ax=ax2)
+        save_lineplot(ax2,
+            title="Learned Value vs. Time", 
+            xlabel="Time", ylabel="Learned Value", 
+            display="Save",
+            savepostfix="stackedLineplot_" + postfix + "multiline")
 
     if animation:
         os.system("ffmpeg -hide_banner -loglevel error -i ./output/Learned_Value_FunctionCuriosity_Value_Function_"
@@ -354,10 +583,12 @@ def basic_experiment(
         gamma,
         steps=1000, 
         dimensions = (11,11), 
+        curiosity_inducing_state = (5,5),
         rng=None, learner_type=CuriousTDLearner, 
         savepostfix="",
         animation=False,
         figure2=False,
+        scaling_constant=3,
         **kwargs):
     gridworld_dimensions = dimensions
     total_steps = steps
@@ -366,10 +597,17 @@ def basic_experiment(
     cylinder = kwargs.pop('cylinder')
     world_type = CylinderGridWorld if cylinder else SimpleGridWorld
 
-    world = world_type(gridworld_dimensions, 
-        start_pos=(gridworld_dimensions[0]//2, gridworld_dimensions[1]//2))
+    if curiosity_inducing_state is None:
+        start_pos = (gridworld_dimensions[0]//2, gridworld_dimensions[1]//2)
+    else:
+        start_pos = curiosity_inducing_state
 
-    learner = learner_type(gridworld_dimensions, model_class=world_type, rng=rng, **kwargs)
+    world = world_type(gridworld_dimensions, 
+        start_pos=start_pos)
+
+    learner = learner_type(gridworld_dimensions, 
+        curiosity_inducing_state=curiosity_inducing_state, 
+        model_class=world_type, rng=rng, **kwargs)
 
     inducer_over_time = np.zeros(total_steps)
     all_targets = learner.get_all_possible_targets()
@@ -380,6 +618,7 @@ def basic_experiment(
     for i in range(total_steps):
         basic_timestep(world, learner, gamma, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
+                       scaling_constant=scaling_constant,
                        animation=animation, teleport=teleport, figure2=figure2)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
         targets_over_time[i] = [learner.V[t] for t in all_targets]
@@ -397,10 +636,10 @@ def main(
         steps: int = typer.Option(200, help="Number of steps in each trial."),
         width: int = typer.Option(11, help="Width of gridworld."),
         height: int = typer.Option(11, help="Height of gridworld."),
-        figwidth: float = typer.Option(None, 
-            help="Width of heatmap figures in inches"),
-        figheight: float = typer.Option(None, 
-            help="Height of heatmap figure in inches"),
+        bookstore_row: int = typer.Option(None, help="Row of the curiosity-inducing location on the grid.  [default: height-6]"),
+        bookstore_col: int = typer.Option(None, help="Column of the curiosity-inducing location on the grid.  [default: width//2]"),
+        scaling_constant: float = typer.Option(3, 
+            help=""),
         csv_output: str = typer.Option("./output/num_target_visits.csv",
             help="File name to append the count of number of target visits."),
         learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
@@ -451,22 +690,18 @@ def main(
     assert not (aversive and positive)
     assert not (ceases and decays)
 
-    if ((figwidth is not None and figheight is None) or 
-        (figheight is not None and figwidth is None)):
-        raise ValueError(
-            "We need both figwidth and figheight to set figsize."
-            )
-    if figwidth is None and figheight is None:
-        figsize = None
-    else:
-        figsize = (figwidth, figheight)
+    if bookstore_row is None:
+        bookstore_row = height-6
+    if bookstore_col is None:
+        bookstore_col = width//2
 
     try:
         batch_run_experiment(
             csv_output,
             trials=trials, steps=steps,
             dimensions=(height, width), 
-            figsize=figsize,
+            curiosity_inducing_state=(bookstore_row, bookstore_col),
+            scaling_constant=scaling_constant,
             learner_type=l_type,
             animation=animation, lineplot=lineplot, figure2=figure2,
             directed=directed, voluntary=voluntary,
