@@ -13,7 +13,7 @@ class SimpleGridWorld(object):
         """
 
         # Default start position is always in the middle, in the bottom row
-        self.start_pos = (side_lengths[0]-2, side_lengths[1]//2)
+        self.start_pos = (side_lengths[0]-1, side_lengths[1]//2)
 
         self.pos = self.start_pos
         self.next_pos = None
@@ -66,7 +66,7 @@ class SimpleGridWorld(object):
 
         next_value_grid = np.zeros(self.dimensions)
 
-        while True:
+        for i in range(0,max(self.dimensions[0], self.dimensions[1])):
             for state in product(range(self.dimensions[0]), range(self.dimensions[1])):
 
                 next_value_grid[state] = -np.inf
@@ -77,12 +77,11 @@ class SimpleGridWorld(object):
                     if value > next_value_grid[state]:
                         next_value_grid[state] = value
 
-            if np.allclose(value_grid, next_value_grid):
-                return next_value_grid
-
             ''' next_value_grid gets obliterated anyways, so we can use the old 
             value_grid to avoid allocating a new array every time.'''
             value_grid, next_value_grid = next_value_grid, value_grid
+
+        return next_value_grid
 
 class CylinderGridWorld(SimpleGridWorld):
     """
@@ -96,8 +95,10 @@ class CylinderGridWorld(SimpleGridWorld):
 
         if start_pos:
             self.pos = start_pos
+            self.start_pos = start_pos
         else:
             self.pos = self.funnel_point
+            self.start_pos = self.funnel_point
 
         #No actions can go down in cylinder world!
         self.actions = tuple(a for a in product((-1,0),(-1,0,1)))
