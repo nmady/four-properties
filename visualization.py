@@ -5,6 +5,7 @@ import matplotlib.colors as colors
 import seaborn as sns
 import os
 import sys
+import matplotlib.ticker
 
 plt.rcParams["font.family"] = "Times New Roman"
 plt.rcParams["font.size"] = 10
@@ -16,7 +17,9 @@ def plot_heatmap(data,
   vmin=None, vmax=None,
   target=None, spawn=None, start=None, agent=None, 
   figsize=None, 
-  linewidths=None, linecolor=None, cbar=True, 
+  linewidths=None, linecolor=None, 
+  cbar=True, 
+  cbar_kws={},
   xticklabels="auto", yticklabels="auto",
   scaling_constant=2,
   display="Show", savepostfix=""):
@@ -45,6 +48,7 @@ def plot_heatmap(data,
     square=True, 
     linewidths=linewidths, linecolor=linecolor, 
     cbar=cbar,
+    cbar_kws=cbar_kws,
     xticklabels=xticklabels, yticklabels=yticklabels)
   ax.set_xticklabels(ax.get_xticklabels(), rotation=0) 
 
@@ -53,10 +57,6 @@ def plot_heatmap(data,
   ax.set_xlim(xmin=-0.1, xmax=float(data.shape[1])+0.1)
 
   # Outline the heatmap
-  # ax.axhline(y=0, color='k',linewidth=1)
-  # ax.axhline(y=data.shape[0], color='k',linewidth=1)
-  # ax.axvline(x=0, color='k',linewidth=1)
-  # ax.axvline(x=data.shape[1], color='k',linewidth=1)
   ax.hlines(y=0, color='k', xmin=0, xmax=data.shape[1], linewidth=1)
   ax.hlines(y=data.shape[0], color='k', xmin=0, xmax=data.shape[1], linewidth=1)
   ax.vlines(x=0, color='k', ymin=0, ymax=data.shape[0], linewidth=1)
@@ -76,7 +76,7 @@ def plot_heatmap(data,
     ax.add_patch(rect)       
   if title:    
     plt.title(title)
-  return fig, ax, fig_bar
+  return fig, ax, fig_bar, ax_bar
 
 
 def plot_final_heatmap(data,
@@ -89,12 +89,28 @@ def plot_final_heatmap(data,
   agent=None, 
   figsize=None, 
   linewidths=None, linecolor=None, savebar=True, 
+  count=False,
   xticklabels="auto", yticklabels="auto",
   tick_location='bottom',
   scaling_constant=2,
   display="Show", 
   savepostfix=""):
-  fig, ax, fig_bar = plot_heatmap(data, 
+  '''
+    Args: 
+      count (boolean): set to True to ensure the colorbar only shows integer
+        labels, e.g. if the values are counts they shouldn't be fractional
+  '''
+
+  if count:
+    if vmax:
+      n = vmax + 1
+    else:
+      tempax = sns.heatmap(data)
+      colorbar = tempax.collections[0].colorbar
+      n = int(colorbar.vmax)
+    cmap = sns.color_palette(cmap, n)
+
+  fig, ax, fig_bar, ax_bar = plot_heatmap(data, 
     cmap=cmap,
     title=title,
     vmin=vmin,vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, 
@@ -103,6 +119,19 @@ def plot_final_heatmap(data,
     xticklabels=xticklabels, yticklabels=yticklabels,
     scaling_constant=scaling_constant,
     display=display, savepostfix=savepostfix)
+
+  # Discretize the colormap if heatmap represents counts
+  if count:
+    colorbar = ax.collections[0].colorbar
+    r = colorbar.vmax - colorbar.vmin
+    # The list comprehension calculates the positions to evenly distribute the 
+    # labels across the colorbar
+    tick_positions = [colorbar.vmin + r * (i + 0.5) / (n) for i in range(n)]
+    tick_labels = [str(num) for num in range(n)]
+    colorbar.set_ticks(tick_positions, labels=tick_labels)
+    for number, tick in zip(range(n-1), ax_bar.yaxis.get_major_ticks()):
+      if n > 5 and number%(n//5) != 0:
+        tick.set_visible(False)
   
   if display == "Show":
     plt.show()
