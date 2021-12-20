@@ -160,7 +160,8 @@ class CuriousTDLearner(GridworldTDLearner):
             # between 1 (inclusive) and width-1 (exclusive).
         self.model = model_class(side_lengths)
 
-        self.num_target_visits = 0      #updated in is_target() method
+        self.num_old_target_visits = 0      #updated in is_target() method
+        self.num_new_target_visits = 0 
         self.target_is_new = False
 
         if rng is not None:
@@ -304,10 +305,11 @@ class CuriousTDLearner(GridworldTDLearner):
 
         if (state == self.target):
             if self.target_is_new:
-                self.num_target_visits += 1
+                self.num_new_target_visits += 1
                 self.target_is_new = False
                 print('x', end="", flush=True)
             else:
+                self.num_old_target_visits += 1
                 print('d', end="", flush=True)
             if self.ceases:
                 self.target = None

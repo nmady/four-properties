@@ -172,6 +172,7 @@ def basic_timestep(
             vmin=0, vmax=2,
             cmap="bone", savepostfix="figure2a_visits"+str(stepnum)+savepostfix,
             scaling_constant=scaling_constant, 
+            count=True,
             display="Save")
         plot_final_heatmap(world.visit_array,
             target=learner.target,
@@ -182,6 +183,7 @@ def basic_timestep(
             linecolor='#AAAAAA22',
             vmin=0, vmax=2,
             yticklabels=False,
+            count=True,
             cmap="bone", savepostfix="figure2d_visits"+str(stepnum)+savepostfix,
             scaling_constant=scaling_constant, 
             display="Save")
@@ -237,6 +239,7 @@ def basic_timestep(
             linecolor='#AAAAAA22',
             vmin=0, vmax=2,
             yticklabels=False,
+            count=True,
             cmap="bone", savepostfix="figure2c_visits"+str(stepnum)+savepostfix,
             scaling_constant=scaling_constant, 
             display="Save")
@@ -296,7 +299,9 @@ def basic_timestep(
                 linecolor='#AAAAAA22',
                 vmin=0, vmax=2,
                 yticklabels=False,
-                cmap="bone", savepostfix="figure2b_visits"+str(stepnum)+savepostfix, 
+                cmap="bone", 
+                count=True,
+                savepostfix="figure2b_visits"+str(stepnum)+savepostfix, 
                 scaling_constant=scaling_constant, display="Save")
         if teleport:
             world.visit(world.next_pos)
@@ -345,6 +350,7 @@ def batch_run_experiment(
         trials=1,
         steps=1000, 
         dimensions = (11,11), 
+        target_count='all',
         curiosity_inducing_state = (5,5),
         scaling_constant=3,
         learner_type=CuriousTDLearner, 
@@ -365,6 +371,7 @@ def batch_run_experiment(
     value_df = pd.DataFrame({"trial":[], "value":[], "type":[]})
 
     setup_info = (str(dimensions[0]) + "_" + str(dimensions[1]) 
+                  + "_trials" + str(trials)
                   + "_steps" + str(steps)
                   + "_bookstore" + str(curiosity_inducing_state[0]) 
                   + "_" + str(curiosity_inducing_state[1]))
@@ -373,7 +380,7 @@ def batch_run_experiment(
     if not os.path.exists(num_target_visits_path):
         os.system("touch " + num_target_visits_path)
     with open(num_target_visits_path, "a") as num_target_visits_f:
-        num_target_visits_f.write(setup_info + ablation_postfix + ",")
+        num_target_visits_f.write(setup_info + ablation_postfix + target_count + ",")
 
     rng = np.random.default_rng(2021)
 
@@ -396,23 +403,32 @@ def batch_run_experiment(
             )
 
         with open(num_target_visits_path, "a") as num_target_visits_f:
-            num_target_visits_f.write(str(learner.num_target_visits) + ",")
+            if target_count == 'new':
+                num_target_visits_f.write(str(learner.num_new_target_visits) + ",")
+            elif target_count == 'old':
+                num_target_visits_f.write(str(learner.num_old_target_visits) + ',')
+            elif target_count == 'all':
+                num_target_visits_f.write(str(learner.num_new_target_visits 
+                    + learner.num_old_target_visits) + ',')
+            else:
+                raise ValueError("target-count must be 'new', 'old', or 'all', not " + str(target_count))
         
         plot_final_heatmap(
             learner.V, 
             target=learner.target, spawn=learner.curiosity_inducing_state, 
             start=world.start_pos, agent=world.next_pos, 
-            title="Value", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, 
+            title="Value (single trial)", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, 
             scaling_constant=scaling_constant,
             linewidths=0.05,
             linecolor='#AAAAAA22',
             display="Save",savepostfix=postfix)
         plot_final_heatmap(
             world.visit_array, 
-            title="Visits", cmap="bone", vmin=0, vmax=steps//10,
+            title="Visits (single trial)", cmap="bone", vmin=0, vmax=steps//10,
             scaling_constant=scaling_constant, 
             linewidths=0.05,
             linecolor='#AAAAAA22',
+            count=True,
             display="Save",savepostfix=postfix)
         
         if value_stacked is None:
@@ -471,13 +487,14 @@ def batch_run_experiment(
     # Compute max edge length for normalization
     maxlen = max(dimensions)
 
+    postfix = "_" + setup_info + ablation_postfix
 
     plot_final_heatmap((np.array(value_stacked)).mean(axis=0), 
         target=None, 
         spawn=learner.curiosity_inducing_state,
         start=world.start_pos, 
         agent=None, 
-        title="Value", 
+        title="Value (mean)", 
         cmap="bwr_r", 
         vmin=-(steps//500), vmax=steps//500,
         scaling_constant=scaling_constant,
@@ -485,12 +502,24 @@ def batch_run_experiment(
         linecolor='#AAAAAA22', 
         display="Save",savepostfix="stackedMean_" + postfix)
 
+    plot_final_heatmap((np.array(value_stacked)).mean(axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state,
+        start=world.start_pos, 
+        agent=None, 
+        title="Value (mean)", 
+        cmap="bwr_r", 
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22', 
+        display="Save",savepostfix="stackedMeanAutoscale_" + postfix)
+
     plot_final_heatmap((np.array(value_stacked)).std(axis=0), 
         target=None, 
         spawn=learner.curiosity_inducing_state,
         start=world.start_pos, 
         agent=None, 
-        title="Value", 
+        title="Value (standard deviation)", 
         cmap="viridis",
         scaling_constant=scaling_constant,
         linewidths=0.05,
@@ -504,10 +533,11 @@ def batch_run_experiment(
         cmap="bone", 
         vmin=0, vmax=steps//10, 
         agent=None, 
-        title="Visits",
+        title="Visits (mean)",
         scaling_constant=scaling_constant,
         linewidths=0.05,
         linecolor='#AAAAAA22', 
+        count=True,
         display="Save",savepostfix="stackedMean_" + postfix)
     
     plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), 
@@ -516,7 +546,7 @@ def batch_run_experiment(
         start=world.start_pos,  
         cmap="bone", 
         vmin=0, vmax=steps//maxlen, 
-        agent=None, title="Visits", 
+        agent=None, title="Visits (normalized)", 
         scaling_constant=scaling_constant,
         linewidths=0.05,
         linecolor='#AAAAAA22',  
@@ -527,11 +557,23 @@ def batch_run_experiment(
         spawn=learner.curiosity_inducing_state, 
         start=world.start_pos,  
         cmap="bone", 
-        agent=None, title="Visits", 
+        agent=None, title="Visits (mean)", 
+        scaling_constant=scaling_constant,
+        linewidths=0.05,
+        linecolor='#AAAAAA22',
+        display="Save",savepostfix="autoscaleStackedMean_" + postfix)
+
+    plot_final_heatmap(np.median(np.array(visit_stacked), axis=0), 
+        target=None, 
+        spawn=learner.curiosity_inducing_state, 
+        start=world.start_pos,  
+        cmap="bone", 
+        agent=None, title="Visits (median)", 
         scaling_constant=scaling_constant,
         linewidths=0.05,
         linecolor='#AAAAAA22',  
-        display="Save",savepostfix="autoscaleStackedMean_" + postfix)
+        count=True,
+        display="Save",savepostfix="autoscaleStackedMedian_" + postfix)
     
     plot_final_heatmap((np.array(visit_stacked)).std(axis=0), 
         target=None, 
@@ -539,7 +581,7 @@ def batch_run_experiment(
         start=world.start_pos,  
         cmap="viridis", 
         agent=None, 
-        title="Visits", 
+        title="Visits (standard deviation)", 
         scaling_constant=scaling_constant,
         linewidths=0.05,
         linecolor='#AAAAAA22',  
@@ -630,6 +672,11 @@ class LearnerType(str, Enum):
     CuriousTDLearner = "CuriousTDLearner"
     GridworldTDLearner = "GridworldTDLearner"
 
+class TargetCountType(str, Enum):
+    new_target_visits = "new"
+    old_target_visits = "old"
+    all_target_visits = "all"
+
 
 def main(
         trials: int = typer.Option(1, help="Number of desired trials."),
@@ -644,6 +691,8 @@ def main(
             help="File name to append the count of number of target visits."),
         learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
             help="Type of learner to experiment with"),
+        target_count: TargetCountType = typer.Option(TargetCountType.all_target_visits, 
+            help="Count target visits only when the target is new, old, or both."),
         directed: bool = typer.Option(True, 
             help="Set to False to ablate directed behaviour."),
         voluntary: bool = typer.Option(True, 
@@ -700,6 +749,7 @@ def main(
             csv_output,
             trials=trials, steps=steps,
             dimensions=(height, width), 
+            target_count=target_count,
             curiosity_inducing_state=(bookstore_row, bookstore_col),
             scaling_constant=scaling_constant,
             learner_type=l_type,
