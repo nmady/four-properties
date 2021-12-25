@@ -6,8 +6,14 @@ import csv
 import typer
 import os
 
+plt.rcParams["font.family"] = "Times New Roman"
+plt.rcParams["font.size"] = 10
+dpi = 200
+
 def plot_bars(steps, width, height, 
-        figsize, filepath, outfilepath, y_logscale=False):
+        figsize, filepath, outfilepath, 
+        y_logscale=False,
+        stacked=False):
 
     csv_dict = {}
     length_dict = {}
