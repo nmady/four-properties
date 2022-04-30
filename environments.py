@@ -91,14 +91,14 @@ class CylinderGridWorld(SimpleGridWorld):
 
         super().__init__(side_lengths)
 
-        self.funnel_point = (side_lengths[0]-1, side_lengths[1]//2)
+        self.junction = (side_lengths[0]-1, side_lengths[1]//2)
 
         if start_pos:
             self.pos = start_pos
             self.start_pos = start_pos
         else:
-            self.pos = self.funnel_point
-            self.start_pos = self.funnel_point
+            self.pos = self.junction
+            self.start_pos = self.junction
 
         #No actions can go down in cylinder world!
         self.actions = tuple(a for a in product((-1,0),(-1,0,1)))
@@ -114,7 +114,7 @@ class CylinderGridWorld(SimpleGridWorld):
         
         new_row = state[0] + action[0]
         if new_row == -1:         #Fall off the top to get to the funnel point
-            return self.funnel_point
+            return self.junction
         elif new_row == self.dimensions[0]:
             new_row = 0           #Or fall off the bottom to get to the top
 
