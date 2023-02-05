@@ -11,6 +11,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import os
+import pickle
 
 def get_curiosity_vmax(learner, gamma):
     max = 0
@@ -33,7 +34,8 @@ def basic_timestep(
         animation=False,
         figure2=False,
         scaling_constant=3,
-        teleport=True):
+        teleport=True,
+        steps_between=None):
     if (type(stepnum) is int and stepnum%100==0):
         print(".", end="", flush=True)
     world.visit(world.pos)
@@ -63,11 +65,12 @@ def basic_timestep(
             #     cmap="bwr_r", savepostfix=savepostfix
             #     )
             plot_both_value_heatmaps(learner.V, learner.vcurious, stepnum, 
-                title=["Learned Value Function", "Curiosity Value Function"],
+                title=["Persistent Value Function", "Curiosity Value Function"],
                 target=learner.target, 
                 spawn=learner.curiosity_inducing_state, 
                 start=world.start_pos, agent=world.pos, 
                 vmin=-vmax, vmax=vmax,
+                figsize=(32,18),
                 cmap="bwr_r", savepostfix=savepostfix
                 )
 
@@ -81,6 +84,12 @@ def basic_timestep(
             threshold=sys.maxsize)
         print(learner.V, file=f)
         print(learner.vcurious, file=f)
+
+    if steps_between is not None:
+        if world.pos == learner.curiosity_inducing_state:
+            steps_between.append(0)
+        else:
+            steps_between[-1] += 1
 
     if world.pos == learner.curiosity_inducing_state and figure2:
         plot_final_heatmap(learner.rcurious,
@@ -120,6 +129,7 @@ def basic_timestep(
             vmin=-10, vmax=10,
             cmap="bwr_r", 
             xticklabels=False,
+            yticklabels=False,
             savepostfix="figure2a_Vcurious"+str(stepnum)+savepostfix, 
             scaling_constant=scaling_constant, 
             display="Save")
@@ -135,7 +145,7 @@ def basic_timestep(
             xticklabels=False,
             yticklabels=False,
             savepostfix="figure2d_Vcurious"+str(stepnum)+savepostfix, 
-            scaling_constant=scaling_constant, 
+            figsize=(2.8,2.8),
             display="Save")
         plot_final_heatmap(learner.V,
             target=learner.target,
@@ -188,7 +198,7 @@ def basic_timestep(
             scaling_constant=scaling_constant, 
             display="Save")
 
-    if world.pos == world.funnel_point and figure2:
+    if world.pos == world.junction and figure2:
         plot_final_heatmap(learner.rcurious,
             target=learner.target,
             spawn=learner.curiosity_inducing_state,
@@ -341,6 +351,9 @@ def get_ablation_postfix(**kwargs):
         elif key == "teleport":
             if value:
                 postfix += "_yes_teleport"
+        elif key == "junction":
+            if not value:
+                postfix += "_no_junction"
         else:
             raise ValueError("Key " + key + " is not recognized.")
     return postfix
@@ -353,6 +366,13 @@ def batch_run_experiment(
         target_count='all',
         curiosity_inducing_state = (5,5),
         scaling_constant=3,
+        show_heatmap_xticks=True,
+        show_heatmap_yticks=True,
+        logscale=False,
+        value_vmax=10,
+        visit_vmax=500,
+        lineplot_dims=(6, 4),
+        lineplot_ymax=None,
         learner_type=CuriousTDLearner, 
         animation=False,
         lineplot=True,
@@ -380,7 +400,8 @@ def batch_run_experiment(
     if not os.path.exists(num_target_visits_path):
         os.system("touch " + num_target_visits_path)
     with open(num_target_visits_path, "a") as num_target_visits_f:
-        num_target_visits_f.write(setup_info + ablation_postfix + target_count + ",")
+        num_target_visits_f.write(setup_info + ablation_postfix 
+            + ',' + target_count + ",")
 
     rng = np.random.default_rng(2021)
 
@@ -413,21 +434,33 @@ def batch_run_experiment(
             else:
                 raise ValueError("target-count must be 'new', 'old', or 'all', not " + str(target_count))
         
+        print('Max value in trial', n, ':', np.max(learner.V))
+        if logscale:
+            value_vmin = 0.01
+        else:
+            value_vmin = -value_vmax
         plot_final_heatmap(
             learner.V, 
             target=learner.target, spawn=learner.curiosity_inducing_state, 
             start=world.start_pos, agent=world.next_pos, 
-            title="Value (single trial)", cmap="bwr_r", vmin=-(steps//500), vmax=steps//500, 
+            title="Value (single trial)", cmap="bwr_r", vmin=value_vmin, vmax=value_vmax, 
             scaling_constant=scaling_constant,
             linewidths=0.05,
             linecolor='#AAAAAA22',
+            logscale=logscale,
+            xticklabels=show_heatmap_xticks,
+            yticklabels=show_heatmap_yticks,
             display="Save",savepostfix=postfix)
+        print('Max visit count in trial', n, ':', np.max(world.visit_array))
         plot_final_heatmap(
             world.visit_array, 
-            title="Visits (single trial)", cmap="bone", vmin=0, vmax=steps//10,
+            title="Visits (single trial)", cmap="bone", vmin=0, vmax=visit_vmax,
             scaling_constant=scaling_constant, 
             linewidths=0.05,
             linecolor='#AAAAAA22',
+            xticklabels=show_heatmap_xticks,
+            yticklabels=show_heatmap_yticks,
+            logscale=logscale,
             count=True,
             display="Save",savepostfix=postfix)
         
@@ -474,8 +507,10 @@ def batch_run_experiment(
             "Max over targets:", targets_over_time.max())
         
         if lineplot:
-            ax = sns.lineplot(x=range(steps), y=inducer_over_time)
-            save_lineplot(ax, 
+            fig0, ax0 = plt.subplots(figsize=lineplot_dims, dpi=200)
+            sns.lineplot(x=range(steps), y=inducer_over_time, ax=ax0)
+            ax0.set_ylim(ymax=lineplot_ymax)
+            save_lineplot(ax0, 
                 title="Value of Curosity-inducing location", 
                 xlabel="Time", ylabel="Value", 
                 display="Save",
@@ -494,14 +529,20 @@ def batch_run_experiment(
         spawn=learner.curiosity_inducing_state,
         start=world.start_pos, 
         agent=None, 
-        title="Value (mean)", 
+        # title="Value (mean)", 
         cmap="bwr_r", 
-        vmin=-(steps//500), vmax=steps//500,
-        scaling_constant=scaling_constant,
+        vmin=value_vmin, vmax=value_vmax,
+        # logscale=logscale,
+        # scaling_constant=scaling_constant,
+        figsize=(2.8, 2.8),
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
         linecolor='#AAAAAA22', 
-        display="Save",savepostfix="stackedMean_" + postfix)
+        display="Save",savepostfix="ValuestackedMean_" + postfix)
 
+    print("Max average value:",
+        np.max((np.array(value_stacked)).mean(axis=0)))
     plot_final_heatmap((np.array(value_stacked)).mean(axis=0), 
         target=None, 
         spawn=learner.curiosity_inducing_state,
@@ -509,7 +550,10 @@ def batch_run_experiment(
         agent=None, 
         title="Value (mean)", 
         cmap="bwr_r", 
+        logscale=logscale,
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
         linecolor='#AAAAAA22', 
         display="Save",savepostfix="stackedMeanAutoscale_" + postfix)
@@ -522,7 +566,10 @@ def batch_run_experiment(
         title="Value (standard deviation)", 
         cmap="viridis",
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
+        logscale=logscale,
         linecolor='#AAAAAA22',
         display="Save",savepostfix="stackedStd_" + postfix)
 
@@ -531,11 +578,14 @@ def batch_run_experiment(
         spawn=learner.curiosity_inducing_state, 
         start=world.start_pos,  
         cmap="bone", 
-        vmin=0, vmax=steps//10, 
+        vmin=0, vmax=visit_vmax, 
         agent=None, 
         title="Visits (mean)",
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
+        logscale=logscale,
         linecolor='#AAAAAA22', 
         count=True,
         display="Save",savepostfix="stackedMean_" + postfix)
@@ -548,10 +598,17 @@ def batch_run_experiment(
         vmin=0, vmax=steps//maxlen, 
         agent=None, title="Visits (normalized)", 
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
+        logscale=logscale,
         linecolor='#AAAAAA22',  
         display="Save",savepostfix="normStackedMean_" + postfix)
 
+    print("Max average number of visits:", 
+        np.max((np.array(visit_stacked)).mean(axis=0)))
+    print("Min nonzero average number of visits:", 
+        (np.ma.masked_equal(visit_stacked, 0.0, copy=False)).min())
     plot_final_heatmap((np.array(visit_stacked)).mean(axis=0), 
         target=None, 
         spawn=learner.curiosity_inducing_state, 
@@ -559,7 +616,10 @@ def batch_run_experiment(
         cmap="bone", 
         agent=None, title="Visits (mean)", 
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
+        logscale=logscale,
         linecolor='#AAAAAA22',
         display="Save",savepostfix="autoscaleStackedMean_" + postfix)
 
@@ -570,8 +630,11 @@ def batch_run_experiment(
         cmap="bone", 
         agent=None, title="Visits (median)", 
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
-        linecolor='#AAAAAA22',  
+        linecolor='#AAAAAA22',
+        logscale=logscale,  
         count=True,
         display="Save",savepostfix="autoscaleStackedMedian_" + postfix)
     
@@ -583,42 +646,53 @@ def batch_run_experiment(
         agent=None, 
         title="Visits (standard deviation)", 
         scaling_constant=scaling_constant,
+        xticklabels=show_heatmap_xticks,
+        yticklabels=show_heatmap_yticks,
         linewidths=0.05,
+        logscale=logscale,
         linecolor='#AAAAAA22',  
         display="Save",savepostfix="stackedStd_" + postfix)
 
     if lineplot:
         df = pd.concat(df_stacked, sort=False)
-        fig1, ax1 = plt.subplots(figsize=(6,4), dpi=200)
+        fig1, ax1 = plt.subplots(figsize=lineplot_dims, dpi=200)
         sns.lineplot(data=df, y="Value", x="Time", hue="Type", 
             palette=sns.color_palette("colorblind")[:2], 
             ci='sd', 
             linewidth=1,
             ax=ax1)
+        ax1.set_ylim(ymax=lineplot_ymax)
         save_lineplot(ax1,
-            title="Learned Value vs. Time", 
+            title="Persistent Value over Time", 
             xlabel="Time", ylabel="Learned Value", 
             display="Save",
             savepostfix="stackedLineplot_" + postfix)
+
+        df.to_pickle("./output/stackedLineplot_" + postfix + ".pkl")
+
         df["NewIndex"] = (df["Trial"].astype('str') 
             + df["Type"].astype('str') 
             + df["Target"].astype('str'))
-        fig2, ax2 = plt.subplots(figsize=(6,4), dpi=200)
+        fig2, ax2 = plt.subplots(figsize=lineplot_dims, dpi=200)
         ax2 = sns.lineplot(data=df[df["Type"] == "Curiosity-inducing location"], 
             palette=[sns.color_palette("colorblind")[0]], 
             linewidth=0.5, y="Value", x="Time", hue="Type", units="NewIndex", estimator=None, alpha=0.36, ax=ax2)
         sns.lineplot(data=df[df["Type"] == "Target"], 
             palette=[sns.color_palette("colorblind")[1]], 
-            linewidth=0.5, y="Value", x="Time", hue="Type", units="NewIndex", estimator=None, alpha=0.04, ax=ax2)
+            linewidth=0.5, y="Value", x="Time", hue="Type", units="NewIndex", estimator=None, alpha=0.25, ax=ax2)
+        ax2.set_ylim(ymax=lineplot_ymax)
         save_lineplot(ax2,
             title="Learned Value vs. Time", 
             xlabel="Time", ylabel="Learned Value", 
             display="Save",
             savepostfix="stackedLineplot_" + postfix + "multiline")
 
+
     if animation:
-        os.system("ffmpeg -hide_banner -loglevel error -i ./output/Learned_Value_FunctionCuriosity_Value_Function_"
+        os.system("ffmpeg -hide_banner -loglevel error -i ./output/Persistent_Value_FunctionCuriosity_Value_Function_"
                   + anim_postfix + "/%d.png -vcodec ffv1 ./output/" + anim_postfix + ".avi")
+
+    print('\n\n')
 
 
 def basic_experiment(
@@ -637,6 +711,7 @@ def basic_experiment(
     
     teleport = kwargs.pop('teleport')
     cylinder = kwargs.pop('cylinder')
+    junction = kwargs.pop('junction')
     world_type = CylinderGridWorld if cylinder else SimpleGridWorld
 
     if curiosity_inducing_state is None:
@@ -645,7 +720,7 @@ def basic_experiment(
         start_pos = curiosity_inducing_state
 
     world = world_type(gridworld_dimensions, 
-        start_pos=start_pos)
+        start_pos=start_pos, junction=junction)
 
     learner = learner_type(gridworld_dimensions, 
         curiosity_inducing_state=curiosity_inducing_state, 
@@ -655,17 +730,22 @@ def basic_experiment(
     all_targets = learner.get_all_possible_targets()
     targets_over_time = np.zeros((total_steps, len(all_targets)))
 
+    steps_between = []
+
     print("Start pos:", world.start_pos)
         
     for i in range(total_steps):
         basic_timestep(world, learner, gamma, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
                        scaling_constant=scaling_constant,
-                       animation=animation, teleport=teleport, figure2=figure2)
+                       animation=animation, teleport=teleport, figure2=figure2,
+                       steps_between=steps_between)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
         targets_over_time[i] = [learner.V[t] for t in all_targets]
-        
-    print("Trial Finished")
+     
+    print()   
+    print("Trial Finished: ", steps_between)
+    print("Max persistent value is at location ", np.unravel_index(np.argmax(learner.V, axis=None), learner.V.shape))
     return learner, world, inducer_over_time, targets_over_time
 
 class LearnerType(str, Enum):
@@ -679,52 +759,112 @@ class TargetCountType(str, Enum):
 
 
 def main(
-        trials: int = typer.Option(1, help="Number of desired trials."),
-        steps: int = typer.Option(200, help="Number of steps in each trial."),
-        width: int = typer.Option(11, help="Width of gridworld."),
-        height: int = typer.Option(11, help="Height of gridworld."),
-        bookstore_row: int = typer.Option(None, help="Row of the curiosity-inducing location on the grid.  [default: height-6]"),
-        bookstore_col: int = typer.Option(None, help="Column of the curiosity-inducing location on the grid.  [default: width//2]"),
-        scaling_constant: float = typer.Option(3, 
-            help=""),
-        csv_output: str = typer.Option("./output/num_target_visits.csv",
-            help="File name to append the count of number of target visits."),
-        learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
-            help="Type of learner to experiment with"),
-        target_count: TargetCountType = typer.Option(TargetCountType.all_target_visits, 
-            help="Count target visits only when the target is new, old, or both."),
-        directed: bool = typer.Option(True, 
-            help="Set to False to ablate directed behaviour."),
-        voluntary: bool = typer.Option(True, 
-            help="Set to False to ablate voluntary."),
-        aversive: bool = typer.Option(True, 
-            help="Set to False to ablate aversive quality."),
-        ceases: bool = typer.Option(True, 
-            help="Set to False to ablate ceases when satisfied."),
-        positive: bool = typer.Option(False, 
-            help="Set to True to make the target have positive value/reward. " +
-                "The parameter 'aversive' must be set to False."),
-        decays: bool = typer.Option(False, 
-            help="Set to True to make satisfying curiosity a slow decay. " + 
-                "The parameter 'ceases' must be set to False."),
-        flip_update: bool = typer.Option(False, 
-            help="Set to True to add instead of subtract the " + 
-                "curiosity value in the TD update."),
-        reward_bonus: bool = typer.Option(False, 
-            help="Set to True to add a bonus to the reward."),
+        # Experiment Setup
+        trials: int = typer.Option(1, help="Number of desired trials.",
+            rich_help_panel="Experiment Setup"),
+        steps: int = typer.Option(200, help="Number of steps in each trial.",
+            rich_help_panel="Experiment Setup"),
+        # Environment Configuration
+        width: int = typer.Option(11, help="Width of gridworld.",
+            rich_help_panel="Environment Configuration"),
+        height: int = typer.Option(11, help="Height of gridworld.",
+            rich_help_panel="Environment Configuration"),
+        bookstore_row: int = typer.Option(None, 
+            help="Row of the curiosity-inducing location on the grid.  [default: height-6]",
+            rich_help_panel="Environment Configuration",
+            show_default=False),
+        bookstore_col: int = typer.Option(None, 
+            help="Column of the curiosity-inducing location on the grid.  [default: width//2]",
+            rich_help_panel="Environment Configuration",
+            show_default=False),
         cylinder: bool = typer.Option(True, 
             help="Connect the top and bottom of the gridworld and don't" +
-                " allow downward actions."),
+                " allow downward actions.",
+            rich_help_panel="Environment Configuration"),
+        junction: bool = typer.Option(True,
+            help="Set to False for a true cylinder with no junction location.",
+            rich_help_panel="Environment Configuration"),
         teleport: bool = typer.Option(False,
-            help="If True, the agent teleports whenever its curiosity ceases."),
+            help="If True, the agent teleports whenever its curiosity ceases.",
+            rich_help_panel="Environment Configuration"),
+        # Ablation Options
+        directed: bool = typer.Option(True, 
+            help="Set to False to ablate directed behaviour.",
+            rich_help_panel="Ablation Options"),
+        voluntary: bool = typer.Option(True, 
+            help="Set to False to ablate voluntary exposure.",
+            rich_help_panel="Ablation Options"),
+        aversive: bool = typer.Option(True, 
+            help="Set to False to ablate aversive quality.",
+            rich_help_panel="Ablation Options"),
+        ceases: bool = typer.Option(True, 
+            help="Set to False to ablate ceases when satisfied.",
+            rich_help_panel="Ablation Options"),
+        positive: bool = typer.Option(False, 
+            help="Set to True to make the target have positive value/reward. " +
+                "The parameter 'aversive' must be set to False.",
+            rich_help_panel="Ablation Options"),
+        decays: bool = typer.Option(False, 
+            help="Set to True to make satisfying curiosity a slow decay. " + 
+                "The parameter 'ceases' must be set to False.",
+            rich_help_panel="Ablation Options"),
+        flip_update: bool = typer.Option(False, 
+            help="Set to True to add instead of subtract the " + 
+                "curiosity value in the TD update.",
+            rich_help_panel="Ablation Options"),
+        reward_bonus: bool = typer.Option(False, 
+            help="Set to True to add a bonus to the reward.",
+            rich_help_panel="Ablation Options"),
+        logscale: bool = typer.Option(False, 
+            help="Set to True to set the heatmaps on a logscale.",
+            rich_help_panel="Figure Configuration"),
+        # Figure Configuration
+        show_heatmap_yticks: bool =typer.Option(True, 
+            help="Set to false to hide the yticks on final heatmaps.",
+            rich_help_panel="Figure Configuration"),
+        show_heatmap_xticks: bool =typer.Option(True, 
+            help="Set to false to hide the yticks on final heatmaps.",
+            rich_help_panel="Figure Configuration"),
+        value_vmax: float = typer.Option(10.0,
+            help="For setting the scale on the colorbars for value heatmaps.",
+            rich_help_panel="Figure Configuration"),
+        visit_vmax: float = typer.Option(500,
+            help="For setting the scale on the colorbars for visit heatmaps.",
+            rich_help_panel="Figure Configuration"),
+        lineplot_height: float = typer.Option(4.0,
+            help="Height in inches for the lineplots.",
+            rich_help_panel="Figure Configuration"),
+        lineplot_width: float = typer.Option(6.0,
+            help="Width in inches for the lineplots.",
+            rich_help_panel="Figure Configuration"),
+        lineplot_ymax: float = typer.Option(None,
+            help="The height of the y-axis in the lineplots.",
+            rich_help_panel="Figure Configuration"),
+        scaling_constant: float = typer.Option(3, 
+            help="",
+            rich_help_panel="Figure Configuration"),
         animation: bool = typer.Option(True, 
             help="If True, save plots of the value function with " + 
-                "agent position at each timestep and output video animation."),
+                "agent position at each timestep and output video animation.",
+            rich_help_panel="Figure Configuration"),
         lineplot: bool = typer.Option(False, 
-            help="If True, output lineplots. (Slow.)"),
+            help="If True, output lineplots. (Slow.)",
+            rich_help_panel="Figure Configuration"),
         figure2: bool = typer.Option(False,
             help="In True, save heatmaps when the agent visits the " + 
-                "curiosity-inducing state or target.")):
+                "curiosity-inducing state or target.",
+            rich_help_panel="Figure Configuration"),
+        # Text Output Configuration
+        csv_output: str = typer.Option("./output/num_target_visits.csv",
+            help="File name to append the count of number of target visits.",
+            rich_help_panel="Text Output Configuration"),
+        learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
+            help="Type of learner to experiment with",
+            rich_help_panel="Experiment Setup"),
+        target_count: TargetCountType = typer.Option(TargetCountType.all_target_visits, 
+            help="Count target visits only when the target is new, old, or both.",
+            rich_help_panel="Text Output Configuration")
+        ):
     """
     Run a batch of experiments.
     """
@@ -744,6 +884,8 @@ def main(
     if bookstore_col is None:
         bookstore_col = width//2
 
+    print('trials =', trials, '; steps =', steps)
+
     try:
         batch_run_experiment(
             csv_output,
@@ -751,7 +893,14 @@ def main(
             dimensions=(height, width), 
             target_count=target_count,
             curiosity_inducing_state=(bookstore_row, bookstore_col),
+            junction=junction,
             scaling_constant=scaling_constant,
+            show_heatmap_xticks=show_heatmap_xticks,
+            show_heatmap_yticks=show_heatmap_yticks,
+            value_vmax=value_vmax, visit_vmax=visit_vmax,
+            logscale=logscale,
+            lineplot_dims=(lineplot_width, lineplot_height),
+            lineplot_ymax=lineplot_ymax,
             learner_type=l_type,
             animation=animation, lineplot=lineplot, figure2=figure2,
             directed=directed, voluntary=voluntary,
