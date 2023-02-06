@@ -85,7 +85,7 @@ def basic_timestep(
         print(learner.V, file=f)
         print(learner.vcurious, file=f)
 
-    if steps_between is not None:
+    if steps_between:
         if world.pos == learner.curiosity_inducing_state:
             steps_between.append(0)
         else:
@@ -365,6 +365,7 @@ def batch_run_experiment(
         dimensions = (11,11), 
         target_count='all',
         curiosity_inducing_state = (5,5),
+        start_pos=None,
         scaling_constant=3,
         show_heatmap_xticks=True,
         show_heatmap_yticks=True,
@@ -415,6 +416,7 @@ def batch_run_experiment(
             gamma,
             steps, dimensions,
             curiosity_inducing_state=curiosity_inducing_state,
+            start_pos=start_pos,
             rng=rng, learner_type=learner_type, 
             savepostfix=anim_postfix, 
             animation=animation,
@@ -700,6 +702,7 @@ def basic_experiment(
         steps=1000, 
         dimensions = (11,11), 
         curiosity_inducing_state = (5,5),
+        start_pos = None,
         rng=None, learner_type=CuriousTDLearner, 
         savepostfix="",
         animation=False,
@@ -714,10 +717,11 @@ def basic_experiment(
     junction = kwargs.pop('junction')
     world_type = CylinderGridWorld if cylinder else SimpleGridWorld
 
-    if curiosity_inducing_state is None:
-        start_pos = (gridworld_dimensions[0]//2, gridworld_dimensions[1]//2)
-    else:
-        start_pos = curiosity_inducing_state
+    if start_pos is None:
+        if curiosity_inducing_state is None:
+            start_pos = (gridworld_dimensions[0]//2, gridworld_dimensions[1]//2)
+        else:
+            start_pos = curiosity_inducing_state
 
     world = world_type(gridworld_dimensions, 
         start_pos=start_pos, junction=junction)
@@ -775,6 +779,14 @@ def main(
             show_default=False),
         bookstore_col: int = typer.Option(None, 
             help="Column of the curiosity-inducing location on the grid.  [default: width//2]",
+            rich_help_panel="Environment Configuration",
+            show_default=False),
+        start_pos_row: int = typer.Option(None,
+            help="Row of the agent's starting location on the grid. [default:bookstore_row]",
+            rich_help_panel="Environment Configuration",
+            show_default=False),
+        start_pos_col: int = typer.Option(None,
+            help="Column of the agent's starting location on the grid. [default:bookstore_col]",
             rich_help_panel="Environment Configuration",
             show_default=False),
         cylinder: bool = typer.Option(True, 
@@ -861,8 +873,8 @@ def main(
         learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
             help="Type of learner to experiment with",
             rich_help_panel="Experiment Setup"),
-        target_count: TargetCountType = typer.Option(TargetCountType.all_target_visits, 
-            help="Count target visits only when the target is new, old, or both.",
+        target_count: TargetCountType = typer.Option("all", 
+            help="Count target visits only when the target is new, old, or both (all).",
             rich_help_panel="Text Output Configuration")
         ):
     """
@@ -884,6 +896,11 @@ def main(
     if bookstore_col is None:
         bookstore_col = width//2
 
+    if start_pos_row is None:
+        start_pos_row = bookstore_row
+    if start_pos_col is None:
+        start_pos_col = bookstore_col
+
     print('trials =', trials, '; steps =', steps)
 
     try:
@@ -893,6 +910,7 @@ def main(
             dimensions=(height, width), 
             target_count=target_count,
             curiosity_inducing_state=(bookstore_row, bookstore_col),
+            start_pos=(start_pos_row, start_pos_col),
             junction=junction,
             scaling_constant=scaling_constant,
             show_heatmap_xticks=show_heatmap_xticks,

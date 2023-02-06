@@ -163,6 +163,7 @@ class CuriousTDLearner(GridworldTDLearner):
         self.num_old_target_visits = 0      #updated in is_target() method
         self.num_new_target_visits = 0 
         self.target_is_new = False
+        self.steps_between_target_and_inducer = []
 
         if rng is not None:
             self.rng = rng
@@ -308,6 +309,7 @@ class CuriousTDLearner(GridworldTDLearner):
                 self.num_new_target_visits += 1
                 self.target_is_new = False
                 print('x', end="", flush=True)
+                self.steps_between_target_and_inducer.append(0)
             else:
                 self.num_old_target_visits += 1
                 print('d', end="", flush=True)
@@ -331,4 +333,7 @@ class CuriousTDLearner(GridworldTDLearner):
                 self.rcurious = self.rcurious * decay_rate
                 self.vcurious = self.model.value_iteration(self.rcurious, 
                                                         gamma=0.9)
+        elif self.target is None:
+            if self.steps_between_target_and_inducer:
+                self.steps_between_target_and_inducer[-1] += 1
         return False
