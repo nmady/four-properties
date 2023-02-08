@@ -31,7 +31,7 @@ def basic_timestep(
         stepnum=None, 
         steps=None, 
         savepostfix="",
-        animation=False,
+        animation=None,
         figure2=False,
         scaling_constant=3,
         teleport=True,
@@ -54,25 +54,28 @@ def basic_timestep(
                 )
         else:
             vmax = steps//500 if steps > 500 else steps/500
-            # plot_interim_heatmap(
-            #     learner.V, stepnum, 
-            #     target=learner.target, 
-            #     spawn=learner.curiosity_inducing_state, 
-            #     start=world.start_pos, 
-            #     agent=world.pos, 
-            #     vmin=-vmax, vmax=vmax, 
-            #     title="Value", 
-            #     cmap="bwr_r", savepostfix=savepostfix
-            #     )
-            plot_both_value_heatmaps(learner.V, learner.vcurious, stepnum, 
-                title=["Persistent Value Function", "Curiosity Value Function"],
-                target=learner.target, 
-                spawn=learner.curiosity_inducing_state, 
-                start=world.start_pos, agent=world.pos, 
-                vmin=-vmax, vmax=vmax,
-                figsize=(32,18),
-                cmap="bwr_r", savepostfix=savepostfix
-                )
+            if animation is AnimationType.persistent:
+                plot_interim_heatmap(
+                    learner.V, stepnum, 
+                    target=learner.target, 
+                    spawn=learner.curiosity_inducing_state, 
+                    agent=world.pos, 
+                    vmin=-vmax, vmax=vmax, 
+                    figsize=(32,18),
+                    title="Persistent Value Function", 
+                    cmap="bwr_r",
+                    savepostfix=savepostfix
+                    )
+            elif animation is AnimationType.both:
+                plot_both_value_heatmaps(learner.V, learner.vcurious, stepnum, 
+                    title=["Persistent Value Function", "Curiosity Value Function"],
+                    target=learner.target, 
+                    spawn=learner.curiosity_inducing_state, 
+                    start=world.start_pos, agent=world.pos, 
+                    vmin=-vmax, vmax=vmax,
+                    figsize=(32,18),
+                    cmap="bwr_r", savepostfix=savepostfix
+                    )
 
     action = learner.get_action(world.pos, epsilon=0.2)
     
@@ -375,7 +378,7 @@ def batch_run_experiment(
         lineplot_dims=(6, 4),
         lineplot_ymax=None,
         learner_type=CuriousTDLearner, 
-        animation=False,
+        animation=None,
         lineplot=True,
         figure2=False,
         **kwargs):
@@ -690,8 +693,12 @@ def batch_run_experiment(
             savepostfix="stackedLineplot_" + postfix + "multiline")
 
 
-    if animation:
-        os.system("ffmpeg -hide_banner -loglevel error -i ./output/Persistent_Value_FunctionCuriosity_Value_Function_"
+    if animation is not AnimationType.none:
+        if animation is AnimationType.persistent:
+            cat = "Persistent_Value_Function"
+        elif animation is AnimationType.both:
+            cat = "Persistent_Value_FunctionCuriosity_Value_Function"
+        os.system("ffmpeg -hide_banner -loglevel error -i ./output/" + cat + "_"
                   + anim_postfix + "/%d.png -vcodec ffv1 ./output/" + anim_postfix + ".avi")
 
     print('\n\n')
@@ -705,7 +712,7 @@ def basic_experiment(
         start_pos = None,
         rng=None, learner_type=CuriousTDLearner, 
         savepostfix="",
-        animation=False,
+        animation=None,
         figure2=False,
         scaling_constant=3,
         **kwargs):
@@ -761,6 +768,10 @@ class TargetCountType(str, Enum):
     old_target_visits = "old"
     all_target_visits = "all"
 
+class AnimationType(str, Enum):
+    persistent = "persistent"
+    both = "both"
+    none = "none"
 
 def main(
         # Experiment Setup
@@ -855,9 +866,9 @@ def main(
         scaling_constant: float = typer.Option(3, 
             help="",
             rich_help_panel="Figure Configuration"),
-        animation: bool = typer.Option(True, 
-            help="If True, save plots of the value function with " + 
-                "agent position at each timestep and output video animation.",
+        animation: AnimationType = typer.Option("both", 
+            help="If not 'none', save plots of the chosen value function(s) " +
+                "with agent position at each timestep and output video animation.",
             rich_help_panel="Figure Configuration"),
         lineplot: bool = typer.Option(False, 
             help="If True, output lineplots. (Slow.)",
@@ -887,6 +898,9 @@ def main(
         l_type = StateCuriosityLearner
     elif learner_type == LearnerType.GridworldTDLearner:
         l_type = GridworldTDLearner
+
+    if animation == AnimationType.none:
+        animation = None
 
     assert not (aversive and positive)
     assert not (ceases and decays)

@@ -8,7 +8,7 @@ import sys
 import matplotlib.ticker
 
 plt.rcParams["font.family"] = "Times New Roman"
-plt.rcParams["font.size"] = 10
+plt.rcParams["font.size"] = 28
 dpi = 200
 
 def plot_heatmap(data,
@@ -18,27 +18,36 @@ def plot_heatmap(data,
   target=None, spawn=None, start=None, agent=None, 
   figsize=None, 
   linewidths=None, linecolor=None, 
+  outline=False,
   cbar=True, 
   cbar_kws={},
+  norm=None,
   xticklabels="auto", yticklabels="auto",
   scaling_constant=2,
   display="Show", savepostfix=""):
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
 
-  matrix_height_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[0]
-  matrix_height_in = matrix_height_pt / dpi
-  matrix_width_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[1]
-  matrix_width_in = matrix_width_pt / dpi
+  if figsize is None:
 
-  print(matrix_width_in, matrix_height_in)
+    matrix_height_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[0]
+    matrix_height_in = matrix_height_pt / dpi
+    matrix_width_pt = plt.rcParams["font.size"] * scaling_constant * data.shape[1]
+    matrix_width_in = matrix_width_pt / dpi
 
-  fig_bar, ax_bar = plt.subplots(figsize=(0.2,matrix_height_in))
-  fig, ax1 = plt.subplots(
-    figsize=(matrix_width_in, matrix_height_in),
-    gridspec_kw=dict(top=1, bottom=0))
+    fig_bar, ax_bar = plt.subplots(figsize=(0.2,matrix_height_in))
+    fig, ax1 = plt.subplots(
+      figsize=(matrix_width_in, matrix_height_in),
+      gridspec_kw=dict(top=1, bottom=0))
+
+  else:
+    fig_bar, ax_bar = plt.subplots(figsize=(0.2, figsize[1]))
+    fig, ax1 = plt.subplots(figsize=figsize, gridspec_kw=dict(top=1, bottom=0))
   
   fig.dpi = dpi
+  
+  if norm is None:
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
   ax = sns.heatmap(data,
     ax=ax1,
@@ -49,7 +58,10 @@ def plot_heatmap(data,
     linewidths=linewidths, linecolor=linecolor, 
     cbar=cbar,
     cbar_kws=cbar_kws,
-    xticklabels=xticklabels, yticklabels=yticklabels)
+    norm=norm,
+    xticklabels=xticklabels, yticklabels=yticklabels
+    )
+
   ax.set_xticklabels(ax.get_xticklabels(), rotation=0) 
 
   # Expand the axis slightly so that the outer grid lines aren't trimmed
@@ -57,10 +69,11 @@ def plot_heatmap(data,
   ax.set_xlim(xmin=-0.1, xmax=float(data.shape[1])+0.1)
 
   # Outline the heatmap
-  ax.hlines(y=0, color='k', xmin=0, xmax=data.shape[1], linewidth=1)
-  ax.hlines(y=data.shape[0], color='k', xmin=0, xmax=data.shape[1], linewidth=1)
-  ax.vlines(x=0, color='k', ymin=0, ymax=data.shape[0], linewidth=1)
-  ax.vlines(x=data.shape[1], color='k', ymin=0, ymax=data.shape[0], linewidth=1)
+  if outline:
+    ax.hlines(y=0, color='k', xmin=0, xmax=data.shape[1], linewidth=1)
+    ax.hlines(y=data.shape[0], color='k', xmin=0, xmax=data.shape[1], linewidth=1)
+    ax.vlines(x=0, color='k', ymin=0, ymax=data.shape[0], linewidth=1)
+    ax.vlines(x=data.shape[1], color='k', ymin=0, ymax=data.shape[0], linewidth=1)
   
   if target != None:
     rect = patches.Rectangle((target[1],target[0]),1,1,linewidth=2,ls="--",edgecolor='#333333',facecolor='none')  
@@ -90,6 +103,7 @@ def plot_final_heatmap(data,
   figsize=None, 
   linewidths=None, linecolor=None, savebar=True, 
   count=False,
+  logscale=False,
   xticklabels="auto", yticklabels="auto",
   tick_location='bottom',
   scaling_constant=2,
@@ -101,12 +115,25 @@ def plot_final_heatmap(data,
         labels, e.g. if the values are counts they shouldn't be fractional
   '''
 
+  norm = None
+  if logscale: 
+    assert(vmin is None or vmin > 0)
+    if cmap != 'bone':
+      cmap = sns.light_palette(sns.color_palette(cmap)[-1], as_cmap=True)
+      background = 'white'
+    else:
+      vmin = 0.5
+      background = 'k'
+    if vmax is not None:
+      norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
+
   if count:
     if vmax:
-      n = vmax + 1
+      n = int(vmax) + 1
     else:
-      tempax = sns.heatmap(data)
-      colorbar = tempax.collections[0].colorbar
+      tempax = sns.heatmap(data, cmap=cmap, vmax=vmax)
+      # https://stackoverflow.com/questions/19816820/how-to-retrieve-colorbar-instance-from-figure-in-matplotlib
+      colorbar = tempax.collections[-1].colorbar
       n = int(colorbar.vmax)
     cmap = sns.color_palette(cmap, n)
 
@@ -117,11 +144,18 @@ def plot_final_heatmap(data,
     figsize=figsize, 
     linewidths=linewidths, linecolor=linecolor, 
     xticklabels=xticklabels, yticklabels=yticklabels,
+    norm=norm,
     scaling_constant=scaling_constant,
     display=display, savepostfix=savepostfix)
 
+  if logscale:
+    ax.set_facecolor(background)
+    fig.patch.set_facecolor('#FFFFFF00')
+    if background == 'k':
+      ax_bar.set_yticks([1,10,100,1000,5000], labels=[1,10,100,1000,5000])
+
   # Discretize the colormap if heatmap represents counts
-  if count:
+  if count and not logscale:
     colorbar = ax.collections[0].colorbar
     r = colorbar.vmax - colorbar.vmin
     # The list comprehension calculates the positions to evenly distribute the 
@@ -143,18 +177,31 @@ def plot_final_heatmap(data,
 
     # Note that using the replace() method turns spaces into underscores, which
     # appears to be more LaTeX-import friendly.
-    plt.savefig("output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200, transparent=True)
+    plt.savefig("output/" + title.replace(" ", "_") + "_" 
+      + savepostfix.replace(" ", "_") + ".png", bbox_inches='tight', dpi=200)#, transparent=True)
     if savebar:
       fig_bar.savefig("output/bar"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+".png", bbox_inches='tight', dpi=200, transparent=True)
     plt.close(fig)
     plt.close(fig_bar)
 
-def plot_interim_heatmap(data, stepnum, cmap="afmhot", title=None, 
-    vmin=None, vmax=None, target=None, spawn=None,start=None, agent=None, 
+def plot_interim_heatmap(
+    data, 
+    stepnum, 
+    cmap="afmhot", 
+    title=None, 
+    vmin=None, vmax=None, 
+    target=None, spawn=None,
+    start=None, agent=None, 
     figsize=None, savepostfix="vid"):
-  fig, ax = plot_heatmap(data, cmap=cmap, title=title, vmin=vmin, vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, savepostfix=savepostfix)
 
+  fig, ax = plt.subplots(1, 1, figsize=figsize)
+  cbar_ax = fig.add_axes([.91, .3, .03, .4])
+  plot_heatmap_to_ax(data, ax=ax, cmap=cmap, cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, savepostfix=savepostfix)  
   ax.text(9, 0, "t="+str(stepnum))
+  if title is None:
+    title = ""
+  else: 
+    ax.set_title(title)
 
   dirpath = "output/"+title.replace(" ", "_")+"_"+savepostfix.replace(" ", "_")+"/"
   subdirectory = os.path.dirname("./" + dirpath)
@@ -163,11 +210,12 @@ def plot_interim_heatmap(data, stepnum, cmap="afmhot", title=None,
   plt.savefig(dirpath+str(stepnum)+".png")
   plt.close()
   
+
 def plot_both_value_heatmaps(data1, data2, stepnum, cmap="bwr_r", 
     title=None,vmin=None,vmax=None,
     target=None,spawn=None,start=None, agent=None, 
     figsize=None, savepostfix="vid"):
-  if data1.shape[0] > data1.shape[1]:
+  if data1.shape[0] >= data1.shape[1]:
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=figsize)
   else: 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=figsize)
@@ -196,7 +244,22 @@ def plot_both_value_heatmaps(data1, data2, stepnum, cmap="bwr_r",
   plt.savefig(dirpath+str(stepnum)+".png")
   plt.close()
 
-def plot_heatmap_to_ax(data, ax=None, cmap="afmhot", cbar_ax=True, vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, figsize=None, display="Show", savepostfix=""):
+def plot_heatmap_to_ax(data, ax=None, cmap="afmhot", cbar_ax=True,
+  vmin=None,vmax=None,target=None,spawn=None,start=None, agent=None, 
+  figsize=None, display="Show", savepostfix=""):
+  '''
+    Args:
+      data (rectangular dataset): from seaborn.heatmap
+        2D dataset that can be coerced into an ndarray. If a Pandas DataFrame is
+        provided, the index/column information will be used to label the columns
+        and rows.
+      ...
+      cbar_ax (cbar_axmatplotlib Axes): from seaborn.heatmap
+        Axes in which to draw the colorbar, otherwise take space from the main 
+        Axes.
+
+
+  '''
   ## Code adapted from the charts tutorial to generate the heatmap
   # afmhot, bone, gray, RdBu are good colour map options
 
@@ -221,10 +284,10 @@ def plot_heatmap_to_ax(data, ax=None, cmap="afmhot", cbar_ax=True, vmin=None,vma
   return ax
     
 
-def save_lineplot(ax, xlabel=None, ylabel=None, title=None, display="Show",savepostfix=""):
+def save_lineplot(ax, xlabel=None, ylabel=None, title=None, show_title=True, display="Show",savepostfix=""):
   ax.legend(frameon=False).set_title(None)
   sns.despine(ax=ax, offset=1, trim=True)
-  if title:    
+  if title and show_title:    
     plt.title(title)
   if xlabel:
     ax.set_xlabel(xlabel)
