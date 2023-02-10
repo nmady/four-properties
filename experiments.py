@@ -32,6 +32,7 @@ def basic_timestep(
         steps=None, 
         savepostfix="",
         animation=None,
+        value_vmax=None,
         figure2=False,
         scaling_constant=3,
         teleport=True,
@@ -49,18 +50,18 @@ def basic_timestep(
                 target=learner.target, 
                 spawn=learner.curiosity_inducing_state, 
                 start=world.start_pos, agent=world.pos, 
+                vmax=value_vmax,
                 title="Value", 
                 cmap="bwr_r", savepostfix=savepostfix
                 )
         else:
-            vmax = steps//500 if steps > 500 else steps/500
             if animation is AnimationType.persistent:
                 plot_interim_heatmap(
                     learner.V, stepnum, 
                     target=learner.target, 
                     spawn=learner.curiosity_inducing_state, 
                     agent=world.pos, 
-                    vmin=-vmax, vmax=vmax, 
+                    vmax=value_vmax, 
                     figsize=(32,18),
                     title="Persistent Value Function", 
                     cmap="bwr_r",
@@ -72,7 +73,7 @@ def basic_timestep(
                     target=learner.target, 
                     spawn=learner.curiosity_inducing_state, 
                     start=world.start_pos, agent=world.pos, 
-                    vmin=-vmax, vmax=vmax,
+                    vmax=value_vmax,
                     figsize=(32,18),
                     cmap="bwr_r", savepostfix=savepostfix
                     )
@@ -423,6 +424,7 @@ def batch_run_experiment(
             rng=rng, learner_type=learner_type, 
             savepostfix=anim_postfix, 
             animation=animation,
+            value_vmax=value_vmax,
             figure2=figure2,
             scaling_constant=scaling_constant,
             **kwargs
@@ -693,11 +695,13 @@ def batch_run_experiment(
             savepostfix="stackedLineplot_" + postfix + "multiline")
 
 
-    if animation is not AnimationType.none:
+    if animation:
         if animation is AnimationType.persistent:
             cat = "Persistent_Value_Function"
         elif animation is AnimationType.both:
             cat = "Persistent_Value_FunctionCuriosity_Value_Function"
+        else:
+            raise NotImplementedError("No implementation to handle animation type " + str(animation))
         os.system("ffmpeg -hide_banner -loglevel error -i ./output/" + cat + "_"
                   + anim_postfix + "/%d.png -vcodec ffv1 ./output/" + anim_postfix + ".avi")
 
@@ -713,6 +717,7 @@ def basic_experiment(
         rng=None, learner_type=CuriousTDLearner, 
         savepostfix="",
         animation=None,
+        value_vmax=None,
         figure2=False,
         scaling_constant=3,
         **kwargs):
@@ -749,7 +754,9 @@ def basic_experiment(
         basic_timestep(world, learner, gamma, stepnum=i, 
                        steps=total_steps, savepostfix=savepostfix,
                        scaling_constant=scaling_constant,
-                       animation=animation, teleport=teleport, figure2=figure2,
+                       animation=animation, 
+                       value_vmax=value_vmax, 
+                       teleport=teleport, figure2=figure2,
                        steps_between=steps_between)
         inducer_over_time[i] = learner.V[learner.curiosity_inducing_state]
         targets_over_time[i] = [learner.V[t] for t in all_targets]

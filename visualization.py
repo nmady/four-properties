@@ -111,6 +111,11 @@ def plot_final_heatmap(data,
   savepostfix=""):
   '''
     Args: 
+      data (rectangular dataset): from seaborn.heatmap
+        2D dataset that can be coerced into an ndarray. 
+        If a Pandas DataFrame is provided, the index/column information will be 
+        used to label the columns and rows.
+
       count (boolean): set to True to ensure the colorbar only shows integer
         labels, e.g. if the values are counts they shouldn't be fractional
   '''
@@ -194,6 +199,10 @@ def plot_interim_heatmap(
     start=None, agent=None, 
     figsize=None, savepostfix="vid"):
 
+  if vmax:
+    if not vmin:
+      vmin = -vmax
+
   fig, ax = plt.subplots(1, 1, figsize=figsize)
   cbar_ax = fig.add_axes([.91, .3, .03, .4])
   plot_heatmap_to_ax(data, ax=ax, cmap=cmap, cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, target=target, spawn=spawn, start=start, agent=agent, figsize=figsize, savepostfix=savepostfix)  
@@ -215,6 +224,11 @@ def plot_both_value_heatmaps(data1, data2, stepnum, cmap="bwr_r",
     title=None,vmin=None,vmax=None,
     target=None,spawn=None,start=None, agent=None, 
     figsize=None, savepostfix="vid"):
+
+  if vmax:
+    if not vmin:
+      vmin = -vmax
+
   if data1.shape[0] >= data1.shape[1]:
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=figsize)
   else: 
