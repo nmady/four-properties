@@ -122,7 +122,10 @@ class CylinderGridWorld(SimpleGridWorld):
         
         new_row = state[0] + action[0]
         if new_row == -1:         #Fall off the top to get to the junction location
-            return self.junction
+            if self.junction:
+                return self.junction
+            else:
+                new_row = self.dimensions[0]-1
         elif new_row == self.dimensions[0]:
             new_row = 0           #Or fall off the bottom to get to the top
 
