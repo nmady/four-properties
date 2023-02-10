@@ -37,8 +37,10 @@ def basic_timestep(
         scaling_constant=3,
         teleport=True,
         steps_between=None):
+
     if (type(stepnum) is int and stepnum%100==0):
         print(".", end="", flush=True)
+
     world.visit(world.pos)
 
     learner.is_curiosity_inducing(world.pos, gamma)
@@ -441,35 +443,39 @@ def batch_run_experiment(
             else:
                 raise ValueError("target-count must be 'new', 'old', or 'all', not " + str(target_count))
         
+
+        kwargs_for_final_heatmaps = {
+            'scaling_constant':scaling_constant,
+            'linewidths':0.05,
+            'linecolor':'#AAAAAA22',
+            'logscale':logscale,
+            'xticklabels':show_heatmap_xticks,
+            'yticklabels':show_heatmap_yticks,
+            'display':"Save",
+            'savepostfix':postfix
+        }
+
         print('Max value in trial', n, ':', np.max(learner.V))
         if logscale:
             value_vmin = 0.01
         else:
             value_vmin = -value_vmax
+
         plot_final_heatmap(
             learner.V, 
             target=learner.target, spawn=learner.curiosity_inducing_state, 
             start=world.start_pos, agent=world.next_pos, 
-            title="Value (single trial)", cmap="bwr_r", vmin=value_vmin, vmax=value_vmax, 
-            scaling_constant=scaling_constant,
-            linewidths=0.05,
-            linecolor='#AAAAAA22',
-            logscale=logscale,
-            xticklabels=show_heatmap_xticks,
-            yticklabels=show_heatmap_yticks,
-            display="Save",savepostfix=postfix)
+            title="Value (single trial)", cmap="bwr_r", 
+            vmin=value_vmin, vmax=value_vmax, 
+            **kwargs_for_final_heatmaps)
+
         print('Max visit count in trial', n, ':', np.max(world.visit_array))
         plot_final_heatmap(
             world.visit_array, 
-            title="Visits (single trial)", cmap="bone", vmin=0, vmax=visit_vmax,
-            scaling_constant=scaling_constant, 
-            linewidths=0.05,
-            linecolor='#AAAAAA22',
-            xticklabels=show_heatmap_xticks,
-            yticklabels=show_heatmap_yticks,
-            logscale=logscale,
+            title="Visits (single trial)", cmap="bone", 
+            vmin=0, vmax=visit_vmax,
             count=True,
-            display="Save",savepostfix=postfix)
+            **kwargs_for_final_heatmaps)
         
         if value_stacked is None:
             value_stacked = [learner.V]
