@@ -134,6 +134,8 @@ class CuriousTDLearner(GridworldTDLearner):
         """
         super().__init__(side_lengths)
 
+        # Special case for default target_row when height=1
+        target_row = 0 if target_row==1 and side_lengths[0]==1 else target_row
         assert 0 <= target_row < side_lengths[0]
 
         self.directed = directed
