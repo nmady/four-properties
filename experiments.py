@@ -368,6 +368,7 @@ def batch_run_experiment(
         num_target_visits_path,
         trials=1,
         steps=1000, 
+        gamma=0.9,
         dimensions = (11,11), 
         target_count='all',
         curiosity_inducing_state = (5,5),
@@ -386,8 +387,6 @@ def batch_run_experiment(
         figure2=False,
         **kwargs):
     
-    gamma = 0.9
-
     # These "_stacked" variables will hold data for plotting aggregate data over
     # the batch of experiments. The first two are for heatmaps, which the second
     # two are for lineplots.
@@ -404,7 +403,11 @@ def batch_run_experiment(
                   + "_" + str(curiosity_inducing_state[1]))
     ablation_postfix = get_ablation_postfix(**kwargs)
 
-    if not os.path.exists(num_target_visits_path):
+    if not os.path.isfile(num_target_visits_path):
+        if os.path.isdir(num_target_visits_path):
+            raise ValueError("csv-output must be a path to a file, not a directory")
+        elif not os.path.exists(os.path.dirname(num_target_visits_path)):
+            os.system("mkdir " + os.path.dirname(num_target_visits_path))
         os.system("touch " + num_target_visits_path)
     with open(num_target_visits_path, "a") as num_target_visits_f:
         num_target_visits_f.write(setup_info + ablation_postfix 
@@ -792,6 +795,11 @@ def main(
             rich_help_panel="Experiment Setup"),
         steps: int = typer.Option(200, help="Number of steps in each trial.",
             rich_help_panel="Experiment Setup"),
+        gamma: float = typer.Option(0.9, help="Discount factor a.k.a. gamma a.k.a termination probability.",
+            rich_help_panel="Experiment Setup"),
+        learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
+            help="Type of learner to experiment with.",
+            rich_help_panel="Experiment Setup"),
         # Environment Configuration
         width: int = typer.Option(11, help="Width of gridworld.",
             rich_help_panel="Environment Configuration"),
@@ -894,9 +902,6 @@ def main(
         csv_output: str = typer.Option("./output/num_target_visits.csv",
             help="File name to append the count of number of target visits.",
             rich_help_panel="Text Output Configuration"),
-        learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
-            help="Type of learner to experiment with",
-            rich_help_panel="Experiment Setup"),
         target_count: TargetCountType = typer.Option("all", 
             help="Count target visits only when the target is new, old, or both (all).",
             rich_help_panel="Text Output Configuration")
@@ -934,6 +939,7 @@ def main(
         batch_run_experiment(
             csv_output,
             trials=trials, steps=steps,
+            gamma=gamma,
             dimensions=(height, width), 
             target_count=target_count,
             curiosity_inducing_state=(bookstore_row, bookstore_col),
