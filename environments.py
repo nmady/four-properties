@@ -26,9 +26,10 @@ class SimpleGridWorld(object):
     def get_next_state(self, state, action):
         # actions look like tuples that you add to the state to get the new position:
         #   [-1,0] is left, [1,0] is right, [0, -1] is probably up? [0,1] is probably down
-        ##TODO: consider using np.clip
-        return (min(max(state[0]+action[0],0), self.dimensions[0]-1), 
-                min(max(state[1]+action[1],0), self.dimensions[1]-1))
+        # this function prevents movement beyond any wall, turning a trnasition into
+        #   a wall into a no-op (left into the left wall means the agent doesn't move)
+        return (np.clip(state[0]+action[0], 0, self.dimensions[0]-1),
+                np.clip(state[1]+action[1], 0, self.dimensions[1]-1))
 
     def visit(self, state):
         """
