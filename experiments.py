@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+import ast
 
 def get_curiosity_vmax(learner, gamma):
     max = 0
@@ -370,6 +371,7 @@ def batch_run_experiment(
         steps=1000, 
         gamma=0.9,
         dimensions = (11,11), 
+        walls=None,
         target_count='all',
         curiosity_inducing_state = (5,5),
         start_pos=None,
@@ -423,7 +425,7 @@ def batch_run_experiment(
 
         learner, world, inducer_over_time, targets_over_time = basic_experiment(
             gamma,
-            steps, dimensions,
+            steps, dimensions, walls,
             curiosity_inducing_state=curiosity_inducing_state,
             start_pos=start_pos,
             rng=rng, learner_type=learner_type, 
@@ -721,6 +723,7 @@ def basic_experiment(
         gamma,
         steps=1000, 
         dimensions = (11,11), 
+        walls=None,
         curiosity_inducing_state = (5,5),
         start_pos = None,
         rng=None, learner_type=CuriousTDLearner, 
@@ -745,6 +748,7 @@ def basic_experiment(
             start_pos = curiosity_inducing_state
 
     world = world_type(gridworld_dimensions, 
+        walls=walls,
         start_pos=start_pos, junction=junction)
 
     learner = learner_type(gridworld_dimensions, 
@@ -799,6 +803,8 @@ def main(
             rich_help_panel="Experiment Setup"),
         learner_type: LearnerType = typer.Option(LearnerType.CuriousTDLearner, 
             help="Type of learner to experiment with.",
+            rich_help_panel="Experiment Setup"),
+        walls: str = typer.Option(None, help="Placement of walls that the agent cannot pass across. List of tuples of tuples of ints denoting neighbouring coordinates in grid: e.g., '((0,0),(0,1)),((0,0),(1,0)).",
             rich_help_panel="Experiment Setup"),
         # Environment Configuration
         width: int = typer.Option(11, help="Width of gridworld.",
@@ -917,6 +923,8 @@ def main(
     elif learner_type == LearnerType.GridworldTDLearner:
         l_type = GridworldTDLearner
 
+    walls = set() if walls is None else set([ast.literal_eval(walls)])
+
     if animation == AnimationType.none:
         animation = None
 
@@ -941,6 +949,7 @@ def main(
             trials=trials, steps=steps,
             gamma=gamma,
             dimensions=(height, width), 
+            walls=walls,
             target_count=target_count,
             curiosity_inducing_state=(bookstore_row, bookstore_col),
             start_pos=(start_pos_row, start_pos_col),

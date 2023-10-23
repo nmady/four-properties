@@ -12,8 +12,8 @@ def test_world_init():
 	world = environments.SimpleGridWorld((50,11))
 
 
-def test_world_get_next_state_walls():
-	"""Ensure agent does not pass through SimpleGridWorld walls
+def test_world_get_next_state_edges():
+	"""Ensure agent does not pass through SimpleGridWorld edge walls
 	"""
 	world = environments.SimpleGridWorld((11,11))
 
@@ -36,3 +36,13 @@ def test_world_get_next_state_walls():
 	assert world.get_next_state((10,10),(1,1)) == (10,10)
 
 
+def test_world_get_next_state_walls():
+	"""Ensure agent does not pass through SimpleGridWorld walls
+	"""
+	world = environments.SimpleGridWorld((11,11), walls={((0,0),(0,1)), ((8,8),(9,8))})
+
+	#test go through wall when on right
+	assert world.get_next_state((0,0),(0,1)) == (0,0)
+
+	#test go through wall when on left
+	assert world.get_next_state((0,1),(0,0)) == (0,1)
